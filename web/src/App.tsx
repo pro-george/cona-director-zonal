@@ -62,7 +62,7 @@ export default function App() {
     case "conducere": screen = <Conducere />; break;
     case "intreaba": screen = <Intreaba q={arg ? decodeURIComponent(arg) : ""} />; break;
     case "raport": screen = <RaportNou me={me.data} back="#/mai-mult" />; break;
-    default: screen = <Azi me={me.data} />;
+    default: screen = <Azi me={me.data} logout={logout} />;
   }
   const T = ({ id, href, icon, label, n }: any) => (
     <a href={href} aria-current={tab === id ? "page" : undefined}><span className="ti"><Icon d={icon} />{n > 0 && <b className="badge">{n}</b>}</span>{label}</a>

@@ -159,12 +159,13 @@ export function SefHome({ me, route, logout }: { me: any; route: string[]; logou
   return (
     <>
       <main>
+        <div className="whoami"><div><strong>{me.user.name}</strong><span className="small muted">Șef de șantier{me.sites[0] ? " · " + me.sites[0].name : ""}</span></div><button className="btn ghost sm" onClick={logout}>Schimbă contul</button></div>
         {tab === "raport" && <>
           <RaportNou me={me} onSent={my.reload} />
           <div className="content"><H>Rapoartele mele</H>{my.data?.reports.length ? <ul className="plain">{my.data.reports.map((r: any) => <li key={r.id}><div className="row between"><Pill s={r.status} /><span className="small muted">{when(r.ts)}</span></div><span>{r.summary}</span></li>)}</ul> : <Empty>Niciun raport trimis.</Empty>}</div>
         </>}
         {tab === "sarcini" && <Page title="Sarcinile șantierului">{my.data?.tasks.length ? <ul className="tasks">{my.data.tasks.map((t: any) => <li key={t.id}><label><input type="checkbox" onChange={async () => { await post("/tasks/" + t.id, { done: true }); my.reload(); }} /><span><strong>{t.title}</strong><span className="small muted">{t.owner} · termen {dayShort(t.due)}</span></span></label></li>)}</ul> : <Empty>Nicio sarcină deschisă.</Empty>}</Page>}
-        {tab === "mesaje" && <Page title="Mesaje" eyebrow={me.user.name}>{my.data?.notifications.length ? <ul className="plain">{my.data.notifications.map((n: any) => <li key={n.id}><span className="small muted">{when(n.ts)}</span><span>{n.text}</span></li>)}</ul> : <Empty>Niciun mesaj.</Empty>}<button className="btn ghost" onClick={logout}>Schimbă contul</button></Page>}
+        {tab === "mesaje" && <Page title="Mesaje" eyebrow={me.user.name}>{my.data?.notifications.length ? <ul className="plain">{my.data.notifications.map((n: any) => <li key={n.id}><span className="small muted">{when(n.ts)}</span><span>{n.text}</span></li>)}</ul> : <Empty>Niciun mesaj.</Empty>}</Page>}
       </main>
       <nav className="tabs three" aria-label="Secțiuni">
         <T id="raport" href="#/" icon={I.mic} label="Raport" />

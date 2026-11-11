@@ -35,7 +35,7 @@ export function Alert({ a, showSite = true }: { a: any; showSite?: boolean }) {
   );
 }
 
-export function Azi({ me }: { me: any }) {
+export function Azi({ me, logout }: { me: any; logout: () => void }) {
   const { data, err, reload } = useLoad<any>("/home");
   const [more, setMore] = useState(false), [q, setQ] = useState("");
   if (!data) return err ? <div className="content"><Err msg={err} /></div> : <div className="splash" />;
@@ -49,7 +49,7 @@ export function Azi({ me }: { me: any }) {
   return (
     <div className="page">
       <header className="hero">
-        <div className="hero-brand"><Brand /><span>Director zonal</span></div>
+        <div className="hero-brand"><Brand /><span>Director zonal</span><button className="link switch-acc" onClick={logout}>Schimbă contul</button></div>
         <p className="eyebrow">{dayLong(data.today)}</p>
         <h1>{hello}, {me.user.name.split(" ")[0]}</h1>
         <p className="state">{data.sites.length} șantiere: {state}</p>
