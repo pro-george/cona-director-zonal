@@ -82,7 +82,7 @@ export default function App() {
   return (
     <>
       <main key={ver}>{screen}</main>
-      {!["intreaba", "raport", "sedinte", "import"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
+      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
       {adding && <AddMenu me={me.data} onClose={() => setAdding(false)} onChanged={(go) => { setAdding(false); if (go) location.hash = go; setVer((n) => n + 1); me.reload(); }} />}
       <nav className="tabs" aria-label="Secțiuni">
         <div className="side-brand"><Brand /><span>Director zonal</span></div>
