@@ -85,6 +85,7 @@ export function Autopilot() {
         <div><b>{mins(data.stats.week.minutes)}</b><span>în ultimele 7 zile</span></div>
       </div>
       <p className="small muted">Timpul economisit este o estimare: fiecare tip de acțiune are un număr fix de minute pe care le-ar lua făcută de mână.</p>
+      <a className="navrow" href="#/valoare"><div><strong>Vezi valoarea în lei</strong><span className="small muted">Zile de șantier, încasări, utilaje și timp, cu formulele la vedere</span></div><span aria-hidden="true">→</span></a>
       <AiKey data={data} reload={reload} />
 
       <H right={<span className="muted small">{drafts.length} de trimis</span>}>Documente pregătite</H>
@@ -146,6 +147,38 @@ export function Replanificari() {
           <div className="row two"><Btn kind="ghost" onClick={() => decide(r.id, "reject")}>Respinge</Btn><Btn onClick={() => decide(r.id, "accept")}>Aplică în grafic</Btn></div>
         </Card>); })}</div>
       {done.length > 0 && <><H>Rezolvate</H><ul className="plain">{done.map((r: any) => <li key={r.id}><div className="row between"><strong>{r.data.site}</strong><span className={"pill " + (r.status === "accepted" ? "s-ok" : "s-none")}>{r.status === "accepted" ? "Aplicat" : "Respins"}</span></div><span className="small muted">{r.data.impact.elements} elemente · {r.decided_by}, {when(r.decided_at)}</span></li>)}</ul></>}
+    </Page>
+  );
+}
+
+export function Valoare() {
+  const { data, err, setData } = useLoad<any>("/value");
+  const [form, setForm] = useState<any>(null), [msg, setMsg] = useState("");
+  if (!data) return <Page title="Valoare" back="#/">{err ? <Err msg={err} /> : <Loading />}</Page>;
+  const f = form || data.params;
+  const save = async () => { try { setData(await post("/value", f)); setForm(null); setMsg("Ipoteze salvate; sumele au fost recalculate."); } catch (e: any) { setMsg(e.message); } };
+  return (
+    <Page title="Valoare" eyebrow="Ce a adus Autopilotul, în lei" back="#/">
+      <div className="apstats two">
+        <div><b>{lei(data.realized)}</b><span>realizat: ai acționat pe propunere</span></div>
+        <div><b>{lei(data.potential)}</b><span>potențial: așteaptă decizia ta</span></div>
+      </div>
+      <p className="small muted">Estimări calculate din datele aplicației cu ipotezele de mai jos. Sunt ordine de mărime pentru discuție, nu cifre contabile.</p>
+      <div className="stack grid2">{data.cats.map((c: any) => (
+        <Card key={c.key}>
+          <div className="row between"><strong className="big">{c.label}</strong><b className="amount">{lei(c.realized + c.potential)}</b></div>
+          {c.items.length === 0 && <Empty>Nimic de numărat aici deocamdată.</Empty>}
+          <ul className="moves">{c.items.map((i: any, k: number) => (
+            <li key={k}><div className="row between"><span className={"pill " + (i.realized ? "s-ok" : "s-none")}>{i.realized ? "Realizat" : "Potențial"}</span><b>{lei(i.amount)}</b></div>
+              <span>{i.site ? i.site + ": " : ""}{i.text}.</span><span className="small muted">Calcul: {i.formula}</span></li>))}</ul>
+        </Card>))}</div>
+      <H>Ipoteze</H>
+      <Card>
+        <p className="small muted">Valorile implicite sunt presupuneri. Înlocuiește-le cu cifrele firmei și totul se recalculează.</p>
+        {data.fields.map((fd: any) => <label key={fd.key} htmlFor={"vp" + fd.key}>{fd.label} ({fd.unit})<input id={"vp" + fd.key} type="number" min={0} inputMode="decimal" value={f[fd.key]} onChange={(e) => setForm({ ...f, [fd.key]: e.target.value })} /></label>)}
+        {msg && <p className="small muted" role="status">{msg}</p>}
+        <Btn onClick={save}>Salvează ipotezele</Btn>
+      </Card>
     </Page>
   );
 }

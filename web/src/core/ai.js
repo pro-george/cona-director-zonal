@@ -80,7 +80,7 @@ export async function makeBrief(ctx) {
   const risks = ctx.alerte.filter((a) => /^\[(Meteo|ERP|BIM|ERP × BIM)\]/.test(a)).map((a) => a.replace(/^\[[^\]]+\]\s*/, "")).slice(0, 7);
   return {
     headline: crit[0] ? `Blocaj la ${crit[0].nume}${crit.length > 1 ? ` și încă ${crit.length - 1}` : ""}` : warn[0] ? `De urmărit: ${warn[0].nume}` : "Toate șantierele sunt în grafic",
-    summary: `${crit[0] ? crit[0].raport.rezumat + " " : ""}În zonă: ${crit.length} cu blocaj, ${warn.length} de urmărit, ${ok.length} în grafic. ${ctx.santiere.filter((s) => !s.raport).length} fără raport recent.`,
+    summary: `${crit[0] ? crit[0].raport.rezumat + " " : ""}În zonă: ${crit.length} cu blocaj, ${warn.length} de urmărit, ${ok.length} în grafic. ${ctx.santiere.filter((s) => !s.raport).length} fără raport recent.` + (() => { const w = ctx.santiere.filter((s) => s.meteo?.zile_cu_risc > 0); return w.length ? ` Meteo: ${w.reduce((a, s) => a + s.meteo.zile_cu_risc, 0)} zile de lucru cu risc pe ${w.length} ${w.length === 1 ? "șantier" : "șantiere"} în următoarele 7 zile.` : " Meteo: nicio lucrare planificată nu este expusă în următoarele 7 zile."; })(),
     sites: ctx.santiere.filter((s) => s.raport).map((s) => ({ id: s.id, line: s.raport.rezumat })), decisions: decisions.slice(0, 6), risks, by: "demo" };
 }
 

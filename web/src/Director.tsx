@@ -82,8 +82,9 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
 
         <div className="stack tight">
           {data.waiting.replans > 0 && <a className="navrow hl" href="#/replanificari"><div><strong>{data.waiting.replans} {data.waiting.replans === 1 ? "grafic nou propus" : "grafice noi propuse"}</strong><span className="small">Autopilotul a replanificat după vreme și livrări. Aprobă sau respinge.</span></div><Icon d={I.chev} size={18} /></a>}
+          <a className="navrow" href="#/meteo"><div><strong>Meteo: {data.weather.days ? `${data.weather.days} zile de lucru cu risc` : "fără risc în 7 zile"}</strong><span className="small muted">{data.weather.days ? `Pe ${data.weather.sites} ${data.weather.sites === 1 ? "șantier" : "șantiere"}, în următoarele 7 zile` : "Nicio lucrare planificată nu este expusă"}</span></div><Icon d={I.chev} size={18} /></a>
           <a className="navrow" href="#/alerte"><div><strong>{data.alerts.length} alerte din sisteme</strong><span className="small muted">{crit ? crit + " critice · " : ""}rapoarte, ERP, BIM și meteo</span></div><Icon d={I.chev} size={18} /></a>
-          <a className="navrow" href="#/autopilot"><div><strong>Autopilot: {st.actions} acțiuni azi</strong><span className="small muted">Cam {mins(st.minutes)} economisite</span></div><Icon d={I.chev} size={18} /></a>
+          <a className="navrow" href="#/valoare"><div><strong>Valoare estimată: {lei(data.value.realized + data.value.potential)}</strong><span className="small muted">{st.actions} acțiuni ale Autopilotului azi{data.value.potential > 0 ? " · " + lei(data.value.potential) + " așteaptă decizia ta" : ""}</span></div><Icon d={I.chev} size={18} /></a>
         </div>
 
         <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) location.hash = "#/intreaba/" + encodeURIComponent(q.trim()); }}>
@@ -204,6 +205,29 @@ export function Santier({ id }: { id: string }) {
             <span className="label">Text original</span><p className="raw">{r.raw}</p>
           </details>
         </Card>))}</div> : <Empty>Niciun raport pentru acest șantier.</Empty>)}
+    </Page>
+  );
+}
+
+export function Meteo() {
+  const { data, err, reload } = useLoad<any>("/weather");
+  const [msg, setMsg] = useState("");
+  const wd = (d: string) => new Intl.DateTimeFormat("ro-RO", { timeZone: "UTC", weekday: "short" }).format(new Date(d + "T12:00:00Z"));
+  if (!data) return <Page title="Meteo" back="#/">{err ? <Err msg={err} /> : <Loading />}</Page>;
+  const total = data.sites.reduce((a: number, s: any) => a + s.riskDays, 0);
+  return (
+    <Page title="Meteo și lucrări" eyebrow={total ? total + " zile de lucru cu risc" : "Fără risc în 7 zile"} back="#/" right={<Btn kind="ghost sm" onClick={async () => { const r = await post("/weather"); setMsg(r.result); await reload(); }}>Actualizează</Btn>}>
+      <p className="small muted">Prognoza pe 7 zile a fiecărui șantier, suprapusă peste lucrările planificate în BIM. O zi e marcată doar dacă în ea e planificată o lucrare pe care vremea o oprește.</p>
+      {msg && <p className="small muted" role="status">{msg}</p>}
+      <div className="stack grid2">{[...data.sites].sort((a: any, b: any) => b.riskDays - a.riskDays).map((s: any) => { const risky = new Set(s.risks.map((r: any) => r.day)); return (
+        <Card key={s.id}>
+          <div className="row between"><strong className="big">{s.name}</strong><span className={"pill " + (s.riskDays ? "s-critic" : "s-ok")}>{s.riskDays ? s.riskDays + (s.riskDays === 1 ? " zi cu risc" : " zile cu risc") : "Fără risc"}</span></div>
+          <div className="row between"><span className="small muted">{s.location}</span><Src>{s.source}</Src></div>
+          {s.days.length ? <div className="wxgrid">{s.days.map((d: any) => <div key={d.day} className={"wxday" + (risky.has(d.day) ? " risk" : "")}><strong>{wd(d.day)}</strong><b>{d.tmax}°</b><span>{d.tmin}°</span><span>{d.gust}</span><span>{d.rain}</span></div>)}</div> : <Empty>Fără prognoză: proiectul nu are localitate.</Empty>}
+          {s.risks.length > 0 && <ul className="moves">{s.risks.map((r: any) => <li key={r.day}><strong>{dayShort(r.day)}: {r.reasons.join(" și ")}</strong><span className="small muted">Expuse: {r.works.join(", ")} · {r.count} {r.count === 1 ? "element" : "elemente"}</span></li>)}</ul>}
+          {s.replan ? <a className="btn sm" href="#/replanificari">Vezi graficul propus</a> : <a className="link" href={"#/santier/" + s.id}>Deschide șantierul</a>}
+        </Card>); })}</div>
+      <p className="small muted">Pe fiecare zi, de sus în jos: maxima, minima, rafalele (km/h) și precipitațiile (mm). Pragurile pe tip de lucrare sunt orientative.</p>
     </Page>
   );
 }

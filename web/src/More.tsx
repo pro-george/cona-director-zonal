@@ -7,6 +7,8 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
   return (
     <Page title="Mai mult" eyebrow={me.user.name}>
       <div className="stack tight grid2">
+        <L href="#/meteo" t="Meteo și lucrări" d="Prognoza pe 7 zile a fiecărui șantier, suprapusă peste grafic" />
+        <L href="#/valoare" t="Valoare" d="Ce a adus Autopilotul, în lei, cu formulele la vedere" />
         <L href="#/import" t="Importă proiect" d="Adu bugetul și graficul din Excel; coloanele se potrivesc singure" />
         <L href="#/sedinte" t="Ședințe" d="Dictezi ce s-a discutat, primești minuta și sarcinile" />
         <L href="#/sarcini" t="Sarcini" d="Tot ce e deschis, pe responsabili și termene" />

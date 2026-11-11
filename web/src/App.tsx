@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { api, post, useLoad } from "./api";
 import { Icon, I, Err, Btn } from "./ui";
-import { Azi, Alerte, Santiere, Santier } from "./Director";
-import { Aprobari, Autopilot, Replanificari } from "./Work";
+import { Azi, Alerte, Meteo, Santiere, Santier } from "./Director";
+import { Aprobari, Autopilot, Replanificari, Valoare } from "./Work";
 import { ImportProiect } from "./Import";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
@@ -53,8 +53,10 @@ export default function App() {
   let screen;
   switch (page) {
     case "alerte": screen = <Alerte />; break;
+    case "meteo": screen = <Meteo />; break;
     case "replanificari": screen = <Replanificari />; break;
     case "import": screen = <ImportProiect />; break;
+    case "valoare": screen = <Valoare />; break;
     case "santiere": screen = <Santiere />; break;
     case "santier": screen = <Santier id={arg} />; break;
     case "aprobari": screen = <Aprobari />; break;

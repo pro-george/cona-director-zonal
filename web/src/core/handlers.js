@@ -10,6 +10,7 @@ import * as auto from "./automations.js";
 import { seed, seedIfEmpty } from "./seed.js";
 import * as replan from "./replan.js";
 import { kindOf } from "./importer.js";
+import * as value from "./value.js";
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -46,7 +47,8 @@ const ROUTES = [
   ["GET", "home", { director: true }, () => {
     const today = dayOf(), reports = latestReports(today), b = one("SELECT * FROM briefs WHERE day=?", today);
     return {
-      today, brief: b ? { ...J(b.data, {}), ts: b.ts } : null, stats: auto.stats(today), alerts: alerts(today),
+      today, brief: b ? { ...J(b.data, {}), ts: b.ts } : null, stats: auto.stats(today), alerts: alerts(today), value: (() => { const v = value.compute(); return { realized: v.realized, potential: v.potential }; })(),
+      weather: (() => { const list = sitesAll().map((s) => wx.riskDays(s.id, today)); return { sites: list.filter((n) => n > 0).length, days: list.reduce((a, n) => a + n, 0) }; })(),
       waiting: { approvals: erp.approvals("pending").length, drafts: one("SELECT COUNT(*) n FROM drafts WHERE status='draft'").n, overdue: one("SELECT COUNT(*) n FROM tasks WHERE status='open' AND due<?", today).n, replans: replan.openCount(), open: one("SELECT COUNT(*) n FROM tasks WHERE status='open'").n },
       sites: sitesAll().map((s) => { const r = reports[s.id], p = bim.physical(s.id, today), f = erp.financeSummary(s, today);
         return { id: s.id, name: s.name, location: s.location, manager: s.manager, status: r ? r.status : "none", summary: r?.summary || "", workers: r?.workers ?? null, reportDay: r?.day || null, realPct: p.realPct, planPct: p.planPct, spentPct: f.spentPct, wx: wx.forecast(s.id).days.find((d) => d.day === today) || null, riskDays: wx.riskDays(s.id, today) }; }),
@@ -94,6 +96,14 @@ const ROUTES = [
     await auto.runNow("weather"); await auto.runNow("replan");
     return { id, name, budget: budget.length, schedule: schedule.length, elements, located: lat != null };
   }],
+
+  ["GET", "weather", { director: true }, () => {
+    const today = dayOf(), open = replan.list().filter((r) => r.status === "proposed");
+    return { today, sites: sitesAll().map((s) => ({ id: s.id, name: s.name, location: s.location, ...wx.forecast(s.id), risks: wx.risksByDay(s.id, today), riskDays: wx.riskDays(s.id, today), replan: open.some((r) => r.site_id === s.id) })) };
+  }],
+  ["POST", "weather", { director: true }, async () => ({ result: await auto.runNow("weather"), replan: await auto.runNow("replan") })],
+  ["GET", "value", { director: true }, () => value.compute()],
+  ["POST", "value", { director: true }, ({ body }) => { const bad = value.saveParams(body || {}); if (bad) fail(400, `Valoare nepotrivită la „${bad}”.`); return value.compute(); }],
 
   ["GET", "replans", { director: true }, () => ({ items: replan.list() })],
   ["POST", "replans/:id", { director: true }, ({ user, params, body }) => {

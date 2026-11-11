@@ -3,7 +3,7 @@
 import { exec, run, one, dayOf, addDays } from "./db.js";
 
 // Crește numărul când se schimbă datele demonstrative: dispozitivele care au o versiune veche o primesc pe cea nouă.
-const SEED_VERSION = 3;
+const SEED_VERSION = 5;
 export function seedIfEmpty() {
   const v = one("SELECT value FROM settings WHERE key='seed_version'");
   if (one("SELECT COUNT(*) n FROM users").n === 0 || !v || Number(v.value) !== SEED_VERSION) seed();
@@ -64,7 +64,7 @@ export function seed() {
   E("campus", "Corp A", "structură și zidării", 30, -120, -30, 30); E("campus", "Corp B", "structură și zidării", 40, -8, 15, 12, 16); E("campus", "Corp C", "structură și zidării", 50, 20, 90, 0);
 
   const D = (s, planned, eta, truck, kind, zone, count, status, note = "") => run("INSERT INTO bim_deliveries(site_id,planned,eta,truck,kind,zone,count,status,note) VALUES(?,?,?,?,?,?,?,?,?)", s, planned, eta, truck, kind, zone, count, status, note);
-  D("hala", d(-1), d(1), "Camion 2 din 3", "grinzi prefabricate", "Axe C–D", 12, "intarziat", "Fabrica a anunțat reprogramare.");
+  D("hala", d(-1), d(2), "Camion 2 din 3", "grinzi prefabricate", "Axe C–D", 12, "intarziat", "Fabrica a anunțat reprogramare.");
   D("hala", d(3), d(3), "Camion 1", "stâlpi prefabricați", "Axe E–F", 10, "planificat");
   D("fabrica", d(2), d(2), "Camion 1", "oțel beton fasonat", "Zona 3", 12, "planificat");
   D("depozit", d(0), d(0), "Camion 1", "panouri sandwich", "Fațada nord", 8, "livrat");

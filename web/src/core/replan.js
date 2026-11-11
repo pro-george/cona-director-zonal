@@ -49,7 +49,7 @@ export function compute(site, today = dayOf()) {
   const eq = late.length ? one("SELECT name, daily_cost FROM erp_equipment WHERE site_id=? AND status='in_asteptare'", site.id) : null;
   const idleDays = eq ? Math.max(1, daysBetween(today, late.reduce((m, d) => max(m, d.eta), today))) : 0;
   const impact = {
-    elements: Object.keys(changes).length, zones: moves.length, lastOld, lastNew, finishShift: daysBetween(lastOld, lastNew),
+    elements: Object.keys(changes).length, zones: moves.length, lostDays: lostDays.size, lastOld, lastNew, finishShift: daysBetween(lastOld, lastNew),
     floatOld: daysBetween(lastOld, site.finish), floatNew: daysBetween(lastNew, site.finish), deadline: site.finish,
     idle: eq ? { name: eq.name, days: idleDays, cost: idleDays * eq.daily_cost } : null,
   };
