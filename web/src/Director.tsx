@@ -54,7 +54,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
         <div className="hero-brand"><Brand /><span>Director zonal</span><button className="link switch-acc" onClick={logout}>Schimbă contul</button></div>
         <p className="eyebrow">{dayLong(data.today)}</p>
         <h1>{hello}, {me.user.name.split(" ")[0]}</h1>
-        <p className="state">{data.sites.length} {data.sites.length === 1 ? "proiect" : "proiecte"}: {state}</p>
+        {data.sites.length > 0 && <p className="state">{data.sites.length} {data.sites.length === 1 ? "proiect" : "proiecte"}: {state}</p>}
       </header>
       {data.sites.length === 0 ? <div className="content"><Card className="brief">
         <p className="headline">Începe cu primul proiect</p>
