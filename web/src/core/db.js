@@ -30,16 +30,24 @@ CREATE TABLE IF NOT EXISTS weather_cache (site_id TEXT PRIMARY KEY, ts INTEGER, 
 CREATE TABLE IF NOT EXISTS erp_budget (id INTEGER PRIMARY KEY, site_id TEXT, category TEXT, budget REAL, actual REAL, committed REAL);
 CREATE TABLE IF NOT EXISTS erp_receivables (id INTEGER PRIMARY KEY, site_id TEXT, no TEXT, title TEXT, amount REAL, issued TEXT, due TEXT, paid_at TEXT);
 CREATE TABLE IF NOT EXISTS erp_approvals (id INTEGER PRIMARY KEY, site_id TEXT, type TEXT, title TEXT, supplier TEXT, amount REAL, category TEXT, requested_by TEXT, created TEXT, status TEXT, decided_at INTEGER, decided_by TEXT, note TEXT, rec TEXT, rec_reason TEXT, auto INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS erp_equipment (id INTEGER PRIMARY KEY, site_id TEXT, name TEXT, daily_cost REAL, status TEXT);
+CREATE TABLE IF NOT EXISTS replans (id INTEGER PRIMARY KEY, ts INTEGER, site_id TEXT, sig TEXT, data TEXT, status TEXT, decided_at INTEGER, decided_by TEXT);
 -- BIM simulat
-CREATE TABLE IF NOT EXISTS bim_elements (id INTEGER PRIMARY KEY, site_id TEXT, code TEXT, kind TEXT, zone TEXT, planned TEXT, status TEXT, mounted_on TEXT);
+CREATE TABLE IF NOT EXISTS bim_elements (id INTEGER PRIMARY KEY, site_id TEXT, code TEXT, kind TEXT, zone TEXT, planned TEXT, baseline TEXT, status TEXT, mounted_on TEXT);
 CREATE TABLE IF NOT EXISTS bim_deliveries (id INTEGER PRIMARY KEY, site_id TEXT, planned TEXT, eta TEXT, truck TEXT, kind TEXT, zone TEXT, count INTEGER, status TEXT, note TEXT);
 `;
 
 export async function openDb({ fresh = false } = {}) {
   const SQL = await initSqlJs({ locateFile: () => wasmUrl });
   const saved = fresh ? null : await idbGet();
-  try { _db = saved ? new SQL.Database(saved) : new SQL.Database(); _db.exec(SCHEMA); }
-  catch { _db = new SQL.Database(); _db.exec(SCHEMA); }
+  // Când se schimbă structura tabelelor, crește SCHEMA_VERSION: bazele vechi de pe dispozitive sunt înlocuite cu una nouă.
+  const SCHEMA_VERSION = 2;
+  try {
+    _db = saved ? new SQL.Database(saved) : new SQL.Database();
+    if (saved && _db.exec("PRAGMA user_version")[0].values[0][0] !== SCHEMA_VERSION) _db = new SQL.Database();
+    _db.exec(SCHEMA);
+  } catch { _db = new SQL.Database(); _db.exec(SCHEMA); }
+  _db.exec("PRAGMA user_version = " + SCHEMA_VERSION);
 }
 const clean = (p) => p.map((v) => (v === undefined ? null : v));
 export const q = (sql, ...p) => { const st = _db.prepare(sql); st.bind(clean(p)); const rows = []; while (st.step()) rows.push(st.getAsObject()); st.free(); return rows; };

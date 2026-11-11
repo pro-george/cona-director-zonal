@@ -75,6 +75,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
         </div>
 
         <div className="stack tight">
+          {data.waiting.replans > 0 && <a className="navrow hl" href="#/replanificari"><div><strong>{data.waiting.replans} {data.waiting.replans === 1 ? "grafic nou propus" : "grafice noi propuse"}</strong><span className="small">Autopilotul a replanificat după vreme și livrări. Aprobă sau respinge.</span></div><Icon d={I.chev} size={18} /></a>}
           <a className="navrow" href="#/alerte"><div><strong>{data.alerts.length} alerte din sisteme</strong><span className="small muted">{crit ? crit + " critice · " : ""}rapoarte, ERP, BIM și meteo</span></div><Icon d={I.chev} size={18} /></a>
           <a className="navrow" href="#/autopilot"><div><strong>Autopilot: {st.actions} acțiuni azi</strong><span className="small muted">Cam {mins(st.minutes)} economisite</span></div><Icon d={I.chev} size={18} /></a>
         </div>
@@ -112,7 +113,7 @@ export function Alerte() {
 export function Santiere() {
   const { data, err } = useLoad<any>("/home");
   return (
-    <Page title="Șantiere" eyebrow="Zona ta">
+    <Page title="Șantiere" eyebrow="Zona ta" right={<a className="btn ghost sm" href="#/import">Importă</a>}>
       <Err msg={err} />
       {!data ? <Loading /> : <div className="stack">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} />)}</div>}
     </Page>
@@ -123,7 +124,7 @@ export function Santier({ id }: { id: string }) {
   const { data, err } = useLoad<any>("/sites/" + id);
   const [tab, setTab] = useState("rezumat");
   if (!data) return <Page title="Șantier" back="#/santiere">{err ? <Err msg={err} /> : <Loading />}</Page>;
-  const { site, finance: f, physical: p, deliveries, reports, tasks, alerts, weather: w } = data;
+  const { site, finance: f, physical: p, deliveries, reports, tasks, alerts, weather: w, replan } = data;
   const riskBy: any = {}; w.risks.forEach((r: any) => { (riskBy[r.day] = riskBy[r.day] || []).push(r); });
   const wd = (d: string) => new Intl.DateTimeFormat("ro-RO", { timeZone: "UTC", weekday: "short" }).format(new Date(d + "T12:00:00Z"));
   const last = reports[0];
@@ -164,11 +165,13 @@ export function Santier({ id }: { id: string }) {
         <ul className="plain">{f.receivables.map((r: any) => <li key={r.id}><div className="row between"><strong>{r.title}</strong><b>{lei(r.amount)}</b></div><span className={"small " + (r.overdueDays ? "t-crit" : "muted")}>{r.paid_at ? "Încasată pe " + dayShort(r.paid_at) : r.overdueDays ? `Restantă de ${r.overdueDays} zile (scadență ${dayShort(r.due)})` : "Scadentă pe " + dayShort(r.due)}</span></li>)}</ul>
       </>}
 
+      {replan && (tab === "stadiu" || tab === "meteo" || tab === "rezumat") && <a className="navrow hl" href="#/replanificari"><div><strong>Grafic nou propus de Autopilot</strong><span className="small">{replan.data.impact.elements} elemente de redatat. Deschide ca să aprobi sau să respingi.</span></div><Icon d={I.chev} size={18} /></a>}
       {tab === "stadiu" && <>
         <Card>
           <div className="row between"><span className="label">Stadiu fizic</span><Src>{p.source}</Src></div>
           <div className="kpis"><div><b>{p.mounted}/{p.total}</b><span>elemente montate</span></div><div><b>{pct(p.planPct)}</b><span>prevăzut până azi</span></div><div><b className={p.lag ? "t-crit" : ""}>{p.lag}</b><span>elemente în urmă</span></div></div>
           <Bar value={p.realPct} plan={p.planPct} tone={p.lag ? "warn" : "ok"} label="Montat față de plan" />
+          {p.replanned > 0 && <p className="small muted">Grafic replanificat: {p.replanned} elemente mutate, cu cel mult {p.slip} zile față de graficul inițial.</p>}
         </Card>
         <H>Pe zone</H>
         <div className="zones">{p.zones.map((z: any) => <div key={z.zone} className={"zone z-" + z.state}><strong>{z.zone}</strong><b>{z.mounted}/{z.total}</b><span>{ZS[z.state]}{z.state === "intarziat" ? ` · ${z.due - z.mounted} în urmă` : ""}</span></div>)}</div>

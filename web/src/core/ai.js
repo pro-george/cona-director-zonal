@@ -75,6 +75,8 @@ export async function makeBrief(ctx) {
     for (const n of s.raport?.needs || []) decisions.push(`${s.nume}: ${n}`);
   }
   if (ctx.aprobari_in_asteptare.length) decisions.push(`Ai ${ctx.aprobari_in_asteptare.length} aprobări în așteptare, în valoare de ${lei(ctx.aprobari_in_asteptare.reduce((a, x) => a + x.suma, 0))}.`);
+  const rp = ctx.replanificari_propuse || [];
+  if (rp.length) decisions.unshift(`Aprobă sau respinge ${rp.length === 1 ? "graficul nou propus" : rp.length + " grafice noi propuse"} de Autopilot (${rp.map((r) => r.santier).join(", ")}).`);
   const risks = ctx.alerte.filter((a) => /^\[(Meteo|ERP|BIM|ERP × BIM)\]/.test(a)).map((a) => a.replace(/^\[[^\]]+\]\s*/, "")).slice(0, 7);
   return {
     headline: crit[0] ? `Blocaj la ${crit[0].nume}${crit.length > 1 ? ` și încă ${crit.length - 1}` : ""}` : warn[0] ? `De urmărit: ${warn[0].nume}` : "Toate șantierele sunt în grafic",

@@ -29,8 +29,10 @@ function simulate(site, today) {
 
 export async function refresh(site, today = dayOf()) {
   let days, source;
-  try { days = await fetchOpenMeteo(site); source = "Open-Meteo"; }
+  if (site.lat == null || site.lon == null) { days = []; source = "Fără localizare"; }
+  else try { days = await fetchOpenMeteo(site); source = "Open-Meteo"; }
   catch { days = simulate(site, today); source = "Meteo simulat"; }
+  if (!days) { days = simulate(site, today); source = "Meteo simulat"; }
   run("INSERT INTO weather_cache(site_id,ts,source,data) VALUES(?,?,?,?) ON CONFLICT(site_id) DO UPDATE SET ts=excluded.ts, source=excluded.source, data=excluded.data", site.id, Date.now(), source, JSON.stringify(days));
   return source;
 }
@@ -40,6 +42,16 @@ export function forecast(siteId) {
   return c ? { source: c.source, ts: c.ts, days: J(c.data, []) } : { source: "Fără prognoză", ts: null, days: [] };
 }
 
+// Motivele pentru care o lucrare de tipul `kind` nu se poate face în ziua cu prognoza `f` (listă goală = se poate).
+export function check(kind, f) {
+  const rule = RULES[kind], reasons = [];
+  if (!rule || !f) return reasons;
+  if (rule.gust != null && f.gust >= rule.gust) reasons.push(`rafale de ${f.gust} km/h (limită ${rule.gust})`);
+  if (rule.frost != null && f.tmin <= rule.frost) reasons.push(`minimă de ${f.tmin}°C (îngheț)`);
+  if (rule.rain != null && f.rain >= rule.rain) reasons.push(`ploaie ${f.rain} mm (limită ${rule.rain})`);
+  return reasons;
+}
+
 export function risks(siteId, today = dayOf()) {
   const byDay = Object.fromEntries(forecast(siteId).days.map((d) => [d.day, d]));
   const work = q("SELECT planned, kind, zone, COUNT(*) n FROM bim_elements WHERE site_id=? AND status!='montat' AND planned BETWEEN ? AND ? GROUP BY planned, kind, zone ORDER BY planned", siteId, today, addDays(today, 6));
@@ -47,10 +59,7 @@ export function risks(siteId, today = dayOf()) {
   for (const w of work) {
     const f = byDay[w.planned], rule = RULES[w.kind];
     if (!f || !rule) continue;
-    const reasons = [];
-    if (rule.gust != null && f.gust >= rule.gust) reasons.push(`rafale de ${f.gust} km/h (limită ${rule.gust})`);
-    if (rule.frost != null && f.tmin <= rule.frost) reasons.push(`minimă de ${f.tmin}°C (îngheț)`);
-    if (rule.rain != null && f.rain >= rule.rain) reasons.push(`ploaie ${f.rain} mm (limită ${rule.rain})`);
+    const reasons = check(w.kind, f);
     if (!reasons.length) continue;
     const key = w.planned + "|" + w.zone, r = out.get(key);
     if (r) r.count += w.n; else out.set(key, { day: w.planned, zone: w.zone, activity: rule.activity, count: w.n, reasons, sev: reasons.some((x) => /rafale|îngheț/.test(x)) ? "crit" : "warn" });

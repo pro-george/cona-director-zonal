@@ -61,6 +61,7 @@ export function zoneContext(today = dayOf()) {
     }),
     alerte: alerts(today).map((a) => `[${a.source}] ${a.site}: ${a.text}`),
     aprobari_in_asteptare: erp.approvals("pending").map((a) => ({ titlu: a.title, suma: a.amount, santier: siteById(a.site_id)?.name, recomandare: a.rec, motiv: a.rec_reason })),
+    replanificari_propuse: q("SELECT data FROM replans WHERE status='proposed'").map((r) => { const d = J(r.data, {}); return { santier: d.site, rezumat: d.summary }; }),
     sarcini_deschise: q("SELECT title, owner, due, site_id FROM tasks WHERE status='open' ORDER BY due").map((t) => ({ titlu: t.title, responsabil: t.owner, termen: t.due })),
   };
 }

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { api, post, useLoad } from "./api";
 import { Icon, I, Err, Btn } from "./ui";
 import { Azi, Alerte, Santiere, Santier } from "./Director";
-import { Aprobari, Autopilot } from "./Work";
+import { Aprobari, Autopilot, Replanificari } from "./Work";
+import { ImportProiect } from "./Import";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
@@ -48,10 +49,12 @@ export default function App() {
   if (user.role !== "director") return <SefHome me={me.data} route={route} logout={logout} />;
 
   const [page, arg] = route;
-  const tab = ["santiere", "santier"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport"].includes(page) ? "mai-mult" : "azi";
+  const tab = ["santiere", "santier", "import"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport"].includes(page) ? "mai-mult" : "azi";
   let screen;
   switch (page) {
     case "alerte": screen = <Alerte />; break;
+    case "replanificari": screen = <Replanificari />; break;
+    case "import": screen = <ImportProiect />; break;
     case "santiere": screen = <Santiere />; break;
     case "santier": screen = <Santier id={arg} />; break;
     case "aprobari": screen = <Aprobari />; break;

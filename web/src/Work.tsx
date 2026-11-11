@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { post, useLoad, lei, when, mins } from "./api";
+import { post, useLoad, lei, when, mins, dayShort } from "./api";
 import { Page, Card, H, Src, Auto, Btn, Err, Loading, Empty, copy } from "./ui";
 
 const TYPE: any = { comanda: "Comandă", situatie_sub: "Situație subcontractor", pontaj: "Pontaj", decont: "Decont" };
@@ -112,6 +112,40 @@ export function Autopilot() {
 
       <H>Jurnal</H>
       <ul className="log">{data.log.map((l: any) => <li key={l.id}><span className="small muted">{when(l.ts)}{l.site ? " · " + l.site : ""}{l.minutes ? " · ~" + l.minutes + " min" : ""}</span><strong>{l.title}</strong>{l.detail && <p className="small">{l.detail}</p>}</li>)}</ul>
+    </Page>
+  );
+}
+
+const range = (a: string, b: string) => (a === b ? dayShort(a) : dayShort(a) + " – " + dayShort(b));
+
+export function Replanificari() {
+  const { data, err, reload } = useLoad<any>("/replans");
+  const [msg, setMsg] = useState("");
+  if (!data) return <Page title="Replanificări" back="#/">{err ? <Err msg={err} /> : <Loading />}</Page>;
+  const open = data.items.filter((r: any) => r.status === "proposed"), done = data.items.filter((r: any) => r.status !== "proposed");
+  const decide = async (id: number, decision: string) => { try { await post("/replans/" + id, { decision }); setMsg(""); await reload(); } catch (e: any) { setMsg(e.message); } };
+  return (
+    <Page title="Replanificări" eyebrow={open.length + " de aprobat"} back="#/">
+      <p className="small muted">Când vremea sau o livrare strică graficul, Autopilotul calculează unul nou din BIM. Nimic nu se schimbă până nu aprobi.</p>
+      <Err msg={msg} />
+      {open.length === 0 && <Empty>Nicio propunere acum. Graficele sunt în regulă cu prognoza și livrările.</Empty>}
+      <div className="stack">{open.map((r: any) => { const d = r.data, im = d.impact; return (
+        <Card key={r.id}>
+          <div className="row between"><Auto>propus {when(r.ts)}</Auto><Src>Meteo × BIM</Src></div>
+          <strong className="big">{d.site}</strong>
+          <p>{d.summary}</p>
+          <span className="label">De ce</span>
+          <ul>{d.reasons.map((x: string, i: number) => <li key={i}>{x.charAt(0).toUpperCase() + x.slice(1)}</li>)}</ul>
+          <span className="label">Ce se mută</span>
+          <ul className="moves">{d.moves.map((m: any) => (
+            <li key={m.zone}><strong>{m.zone}</strong><span className="small muted">{m.activity} · {m.count} elemente</span>
+              <div className="mv"><span>{range(m.fromFirst, m.fromLast)}</span><span aria-hidden="true">→</span><b>{range(m.toFirst, m.toLast)}</b><em>+{m.shift} {m.shift === 1 ? "zi" : "zile"}</em></div></li>))}</ul>
+          <div className="kpis"><div><b>{im.elements}</b><span>elemente redatate</span></div><div><b>{im.finishShift > 0 ? "+" + im.finishShift + " zile" : "neschimbat"}</b><span>ultima lucrare ({dayShort(im.lastNew)})</span></div><div><b>{im.floatNew} zile</b><span>rezervă până la termen</span></div></div>
+          {im.idle && <p className="small">Utilaj în așteptare: {im.idle.name}, {im.idle.days} {im.idle.days === 1 ? "zi" : "zile"}, circa {lei(im.idle.cost)}.</p>}
+          {d.alternatives?.length > 0 && <><span className="label">Ce se poate lucra în zilele pierdute</span><ul>{d.alternatives.map((a: any, i: number) => <li key={i}>{dayShort(a.day)}: {a.text}</li>)}</ul></>}
+          <div className="row two"><Btn kind="ghost" onClick={() => decide(r.id, "reject")}>Respinge</Btn><Btn onClick={() => decide(r.id, "accept")}>Aplică în grafic</Btn></div>
+        </Card>); })}</div>
+      {done.length > 0 && <><H>Rezolvate</H><ul className="plain">{done.map((r: any) => <li key={r.id}><div className="row between"><strong>{r.data.site}</strong><span className={"pill " + (r.status === "accepted" ? "s-ok" : "s-none")}>{r.status === "accepted" ? "Aplicat" : "Respins"}</span></div><span className="small muted">{r.data.impact.elements} elemente · {r.decided_by}, {when(r.decided_at)}</span></li>)}</ul></>}
     </Page>
   );
 }

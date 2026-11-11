@@ -6,10 +6,12 @@ import * as bim from "./connectors/bim.js";
 import * as wx from "./connectors/weather.js";
 import { sitesAll, siteById, zoneContext, latestReports, reportRow } from "./data.js";
 import { makeBrief, mgmtReport, draftLetter } from "./ai.js";
+import * as replan from "./replan.js";
 
 export const DEFS = [
   { key: "brief", name: "Briefing de dimineață", desc: "Citește rapoartele de șantier, ERP-ul și BIM-ul și scrie rezumatul zilei, cu deciziile care te așteaptă.", schedule: { type: "daily", at: "06:45" }, when: "Zilnic, 06:45" },
   { key: "weather", name: "Meteo sincronizat cu lucrările", desc: "Ia prognoza pe 7 zile pentru fiecare șantier, o suprapune peste lucrările planificate în BIM și anunță din timp ce trebuie replanificat.", schedule: { type: "hourly" }, when: "Din oră în oră" },
+  { key: "replan", name: "Replanificare automată", desc: "Când vremea sau o livrare strică graficul, calculează unul nou din BIM, cu impactul pe termen și pe cost, și ți-l propune spre aprobare.", schedule: { type: "hourly" }, when: "Din oră în oră" },
   { key: "triage", name: "Triaj rapoarte de șantier", desc: "La fiecare raport primit: îl structurează, deschide sarcini din blocaje și pregătește adresele către beneficiar.", schedule: { type: "event" }, when: "La fiecare raport" },
   { key: "chase", name: "Reamintire rapoarte lipsă", desc: "Le scrie șefilor de șantier care nu au raportat până la sfârșitul zilei.", schedule: { type: "daily", at: "17:30" }, when: "Zilnic, 17:30" },
   { key: "precheck", name: "Verificare aprobări față de buget", desc: "Compară fiecare cerere cu bugetul rămas din ERP și îți dă o recomandare motivată.", schedule: { type: "hourly" }, when: "Din oră în oră" },
@@ -39,6 +41,11 @@ async function addDraft(kind, ref, site, recipient, title, facts) {
 }
 
 const RUN = {
+  async replan() {
+    const fresh = replan.generate(dayOf());
+    for (const f of fresh) log("replan", `Am pregătit un grafic nou pentru ${f.site.name}`, f.data.summary, f.site.id, 40);
+    return fresh.length ? `${fresh.length} propuneri noi` : "Nicio propunere nouă";
+  },
   async weather() {
     const today = dayOf(); let n = 0, source = "";
     for (const s of sitesAll()) {
@@ -167,5 +174,5 @@ export async function bootstrap() {
   ensure();
   if (one("SELECT COUNT(*) n FROM automation_log").n > 0) return;
   for (const r of q("SELECT id FROM reports WHERE day=? ORDER BY ts", dayOf())) await onReport(r.id, false);
-  for (const k of ["weather", "precheck", "autoapprove", "deliveries", "cash", "brief"]) await runNow(k);
+  for (const k of ["weather", "replan", "precheck", "autoapprove", "deliveries", "cash", "brief"]) await runNow(k);
 }

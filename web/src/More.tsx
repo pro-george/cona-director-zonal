@@ -7,6 +7,7 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
   return (
     <Page title="Mai mult" eyebrow={me.user.name}>
       <div className="stack tight">
+        <L href="#/import" t="Importă proiect" d="Adu bugetul și graficul din Excel; coloanele se potrivesc singure" />
         <L href="#/sedinte" t="Ședințe" d="Dictezi ce s-a discutat, primești minuta și sarcinile" />
         <L href="#/sarcini" t="Sarcini" d="Tot ce e deschis, pe responsabili și termene" />
         <L href="#/conducere" t="Raport pentru conducere" d="Ciorna săptămânală, scrisă din rapoarte, ERP și BIM" />

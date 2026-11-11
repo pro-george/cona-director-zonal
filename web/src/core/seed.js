@@ -3,7 +3,7 @@
 import { exec, run, one, dayOf, addDays } from "./db.js";
 
 // Crește numărul când se schimbă datele demonstrative: dispozitivele care au o versiune veche o primesc pe cea nouă.
-const SEED_VERSION = 2;
+const SEED_VERSION = 3;
 export function seedIfEmpty() {
   const v = one("SELECT value FROM settings WHERE key='seed_version'");
   if (one("SELECT COUNT(*) n FROM users").n === 0 || !v || Number(v.value) !== SEED_VERSION) seed();
@@ -12,7 +12,7 @@ export function seedIfEmpty() {
 export function seed() {
   const T = dayOf(), d = (n) => addDays(T, n);
   const at = (n, h, m) => new Date(`${d(n)}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00+02:00`).getTime();
-  for (const t of ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"]) exec(`DELETE FROM ${t}`);
+  for (const t of ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"]) exec(`DELETE FROM ${t}`);
 
   const user = (name, email, role, site) => Number(run("INSERT INTO users(name,email,role,pass,site_id) VALUES(?,?,?,?,?)", name, email, role, "", site).lastInsertRowid);
   user("Cristian", "director@demo.local", "director", null);
@@ -55,7 +55,7 @@ export function seed() {
     for (let i = 0; i < n; i++) {
       const planned = d(Math.round(from + ((to - from) * i) / Math.max(1, n - 1)));
       const status = i < mounted ? "montat" : i < delivered ? "livrat" : "planificat";
-      run("INSERT INTO bim_elements(site_id,code,kind,zone,planned,status,mounted_on) VALUES(?,?,?,?,?,?,?)", s, `${kind.slice(0, 2).toUpperCase()}-${zone.replace(/[^A-Z0-9]/gi, "")}-${String(i + 1).padStart(2, "0")}`, kind, zone, planned, status, status === "montat" ? planned : null);
+      run("INSERT INTO bim_elements(site_id,code,kind,zone,planned,baseline,status,mounted_on) VALUES(?,?,?,?,?,?,?,?)", s, `${kind.slice(0, 2).toUpperCase()}-${zone.replace(/[^A-Z0-9]/gi, "")}-${String(i + 1).padStart(2, "0")}`, kind, zone, planned, planned, status, status === "montat" ? planned : null);
     }
   };
   E("hala", "Axe A–B", "stâlpi și grinzi", 30, -20, -8, 30); E("hala", "Axe C–D", "stâlpi și grinzi", 30, -7, 1, 14, 14); E("hala", "Axe E–F", "stâlpi și grinzi", 30, 2, 12, 0, 6); E("hala", "Axe G–H", "stâlpi și grinzi", 30, 13, 24, 0);
@@ -69,6 +69,10 @@ export function seed() {
   D("fabrica", d(2), d(2), "Camion 1", "oțel beton fasonat", "Zona 3", 12, "planificat");
   D("depozit", d(0), d(0), "Camion 1", "panouri sandwich", "Fațada nord", 8, "livrat");
   D("campus", d(1), d(1), "Camion 1", "blocuri ceramice", "Corp B", 18, "planificat");
+
+  /* ----- ERP simulat: utilaje închiriate ----- */
+  const Q = (s, name, cost, status) => run("INSERT INTO erp_equipment(site_id,name,daily_cost,status) VALUES(?,?,?,?)", s, name, cost, status);
+  Q("hala", "Macara 100 t", 8500, "in_asteptare"); Q("fabrica", "Pompă de beton", 2400, "activ"); Q("depozit", "Nacelă 26 m", 900, "activ"); Q("campus", "Macara turn", 3200, "activ");
 
   /* ----- rapoarte de șantier ----- */
   const P = (s, n, h, mi, author, raw, status, summary, workers, details) => run("INSERT INTO reports(site_id,user_id,author,day,ts,raw,status,summary,workers,details,photos) VALUES(?,?,?,?,?,?,?,?,?,?,'[]')", s, m[s], author, d(n), at(n, h, mi), raw, status, summary, workers, JSON.stringify({ equipment: [], done: [], blockers: [], needs: [], photoNotes: [], ...details }));

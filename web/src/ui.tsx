@@ -55,7 +55,7 @@ export function Bar({ value, plan, tone = "brand", label }: { value: number; pla
 export function Btn({ children, onClick, kind = "primary", busy, ...p }: any) {
   const [working, setWorking] = useState(false);
   const click = async (e: any) => { if (!onClick) return; setWorking(true); try { await onClick(e); } finally { setWorking(false); } };
-  return <button type="button" className={"btn " + kind} disabled={working || busy || p.disabled} onClick={click} {...p}>{working || busy ? "Se lucrează…" : children}</button>;
+  return <button type="button" {...p} className={"btn " + kind} disabled={working || busy || p.disabled} onClick={click}>{working || busy ? "Se lucrează…" : children}</button>;
 }
 
 // Câmp de text cu dictare: butonul de microfon apare doar unde browserul o permite.

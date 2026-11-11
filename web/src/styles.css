@@ -283,3 +283,23 @@ ul.plain li { padding: 14px 16px; }
 .whoami div { display: flex; flex-direction: column; min-width: 0; }
 .whoami .btn { align-self: center; flex: none; }
 .switch-acc { margin-left: auto; align-self: center; text-transform: none; letter-spacing: 0; font-size: 14px; }
+
+/* replanificări și import */
+.navrow.hl { background: var(--tint); border-color: var(--tint); color: var(--tint-ink); }
+.moves { list-style: none; padding: 0 !important; gap: 0 !important; }
+.moves li { padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; }
+.moves li:first-child { border-top: 0; padding-top: 2px; }
+.mv { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: baseline; font-size: 14.5px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.mv span:first-child { color: var(--muted); text-decoration: line-through; }
+.mv em { font-style: normal; font-size: 12.5px; font-weight: 600; background: var(--warn-bg); color: var(--warn); padding: 1px 8px; border-radius: 999px; }
+.steps { display: flex; gap: 6px; }
+.steps i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+.steps i.on { background: var(--brand); }
+.drop { border: 1.5px dashed var(--line); border-radius: var(--radius); padding: 26px 16px; text-align: center; background: var(--surface); display: flex; flex-direction: column; gap: 8px; align-items: center; cursor: pointer; color: var(--muted); }
+.maprow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.maprow:first-of-type { border-top: 0; }
+.maprow select { padding: 8px 10px; }
+.tblwrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+.tblwrap table { border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+.tblwrap th, .tblwrap td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+.tblwrap th { background: var(--surface-2); font-weight: 600; }

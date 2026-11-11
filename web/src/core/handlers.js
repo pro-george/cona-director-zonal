@@ -8,6 +8,8 @@ import { sitesAll, siteById, latestReports, alerts, zoneContext, reportRow } fro
 import * as ai from "./ai.js";
 import * as auto from "./automations.js";
 import { seed, seedIfEmpty } from "./seed.js";
+import * as replan from "./replan.js";
+import { kindOf } from "./importer.js";
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -45,7 +47,7 @@ const ROUTES = [
     const today = dayOf(), reports = latestReports(today), b = one("SELECT * FROM briefs WHERE day=?", today);
     return {
       today, brief: b ? { ...J(b.data, {}), ts: b.ts } : null, stats: auto.stats(today), alerts: alerts(today),
-      waiting: { approvals: erp.approvals("pending").length, drafts: one("SELECT COUNT(*) n FROM drafts WHERE status='draft'").n, overdue: one("SELECT COUNT(*) n FROM tasks WHERE status='open' AND due<?", today).n, open: one("SELECT COUNT(*) n FROM tasks WHERE status='open'").n },
+      waiting: { approvals: erp.approvals("pending").length, drafts: one("SELECT COUNT(*) n FROM drafts WHERE status='draft'").n, overdue: one("SELECT COUNT(*) n FROM tasks WHERE status='open' AND due<?", today).n, replans: replan.openCount(), open: one("SELECT COUNT(*) n FROM tasks WHERE status='open'").n },
       sites: sitesAll().map((s) => { const r = reports[s.id], p = bim.physical(s.id, today), f = erp.financeSummary(s, today);
         return { id: s.id, name: s.name, location: s.location, manager: s.manager, status: r ? r.status : "none", summary: r?.summary || "", workers: r?.workers ?? null, reportDay: r?.day || null, realPct: p.realPct, planPct: p.planPct, spentPct: f.spentPct, wx: wx.forecast(s.id).days.find((d) => d.day === today) || null, riskDays: wx.riskDays(s.id, today) }; }),
     };
@@ -57,7 +59,47 @@ const ROUTES = [
     return { site: s, finance: erp.financeSummary(s, today), physical: bim.physical(s.id, today), deliveries: bim.deliveries(s.id, addDays(today, -3), addDays(today, 10)),
       weather: { ...wx.forecast(s.id), risks: wx.risks(s.id, today), riskDays: wx.riskDays(s.id, today) },
       reports: q("SELECT * FROM reports WHERE site_id=? ORDER BY ts DESC LIMIT 10", s.id).map(reportRow),
-      tasks: q("SELECT * FROM tasks WHERE site_id=? AND status='open' ORDER BY due", s.id), alerts: alerts(today).filter((a) => a.site_id === s.id) };
+      tasks: q("SELECT * FROM tasks WHERE site_id=? AND status='open' ORDER BY due", s.id), alerts: alerts(today).filter((a) => a.site_id === s.id),
+      replan: replan.list().find((r) => r.site_id === s.id && r.status === "proposed") || null };
+  }],
+
+  ["POST", "projects/import", { director: true }, async ({ body }) => {
+    const name = String(body.name || "").trim().slice(0, 80) || fail(400, "Scrie numele proiectului.");
+    const budget = Array.isArray(body.budget) ? body.budget.slice(0, 200) : [], schedule = Array.isArray(body.schedule) ? body.schedule.slice(0, 400) : [];
+    if (!budget.length && !schedule.length) fail(400, "Fișierul nu conține nici buget, nici grafic de lucrări care să poată fi importat.");
+    const location = String(body.location || "").trim().slice(0, 60);
+    let lat = null, lon = null;
+    if (location) try {
+      const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=5&language=ro&format=json`, { signal: AbortSignal.timeout(6000) });
+      const hits = (await r.json()).results || [], hit = hits.find((h) => h.country_code === "RO") || hits[0];
+      if (hit) { lat = hit.latitude; lon = hit.longitude; }
+    } catch { /* fără coordonate proiectul rămâne fără meteo */ }
+    const today = dayOf(), id = "imp-" + Date.now().toString(36);
+    const dates = schedule.flatMap((r) => [r.start, r.end]).filter(Boolean).sort();
+    const total = budget.reduce((a, b) => a + b.budget, 0);
+    run("INSERT INTO sites(id,name,location,client,manager_id,contract,start,finish,ord,lat,lon) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, name, location, String(body.client || "").slice(0, 80), null, Number(body.contract) > 0 ? Number(body.contract) : total, dates[0] || today, dates.at(-1) || addDays(today, 90), (one("SELECT MAX(ord) m FROM sites").m || 0) + 1, lat, lon);
+    for (const b of budget) run("INSERT INTO erp_budget(site_id,category,budget,actual,committed) VALUES(?,?,?,?,?)", id, String(b.category).slice(0, 80), b.budget, b.actual || 0, b.committed || 0);
+    let elements = 0;
+    for (const r of schedule) {
+      if (elements > 3000) break;
+      const kind = kindOf(r.work + " " + r.zone) || String(r.work).slice(0, 60), n = r.qty > 0 ? (r.qty <= 300 ? r.qty : 60) : 10;
+      const span = Math.max(0, Math.round((new Date(r.end) - new Date(r.start)) / 86400000)), mounted = Math.round((n * (r.done || 0)) / 100);
+      for (let i = 0; i < n; i++) {
+        const planned = addDays(r.start, Math.round((span * i) / Math.max(1, n - 1)));
+        run("INSERT INTO bim_elements(site_id,code,kind,zone,planned,baseline,status,mounted_on) VALUES(?,?,?,?,?,?,?,?)", id, `IMP-${elements + 1}`, kind, String(r.zone).slice(0, 60), planned, planned, i < mounted ? "montat" : "planificat", i < mounted ? planned : null);
+        elements++;
+      }
+    }
+    auto.log("import", `Am importat proiectul ${name}`, `${budget.length} linii de buget și ${schedule.length} lucrări (${elements} elemente de urmărit). ${lat != null ? "Localizat pentru meteo: " + location + "." : "Fără localizare, deci fără meteo."}`, id, 90);
+    await auto.runNow("weather"); await auto.runNow("replan");
+    return { id, name, budget: budget.length, schedule: schedule.length, elements, located: lat != null };
+  }],
+
+  ["GET", "replans", { director: true }, () => ({ items: replan.list() })],
+  ["POST", "replans/:id", { director: true }, ({ user, params, body }) => {
+    const r = replan.decide(Number(params.id), body.decision === "accept", user.name) || fail(409, "Propunerea a fost deja rezolvată.");
+    if (body.decision === "accept") auto.log("replan", `Am scris graficul nou în BIM pentru ${r.site.name}`, `${r.data.impact.elements} elemente redatate. Șeful de șantier a fost anunțat, iar sarcinile de replanificare au fost închise.`, r.site.id, 20);
+    return { ok: true };
   }],
 
   ["POST", "reports", {}, async ({ user, body }) => {
