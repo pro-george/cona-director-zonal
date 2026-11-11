@@ -52,3 +52,30 @@ export function useDictation(onText: (t: string) => void) {
   useEffect(() => () => rec.current?.abort?.(), []);
   return { supported: !!SR, on, partial, toggle };
 }
+
+// Citire cu voce (sinteza vocală a browserului). Alege o voce în română dacă telefonul are una.
+const synth: SpeechSynthesis | null = typeof window !== "undefined" && "speechSynthesis" in window ? window.speechSynthesis : null;
+export const canSpeak = !!synth;
+export const roVoice = () => synth?.getVoices().find((v) => v.lang?.toLowerCase().startsWith("ro")) || null;
+export function stopSpeaking() { synth?.cancel(); }
+export function speak(text: string, onEnd?: () => void) {
+  if (!synth) { onEnd?.(); return false; }
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[„”"]/g, ""));
+  const v = roVoice(); if (v) u.voice = v; u.lang = "ro-RO"; u.rate = 1.02;
+  u.onend = () => onEnd?.(); u.onerror = () => onEnd?.();
+  synth.speak(u); return true;
+}
+// O singură frază ascultată, pentru comenzi. Întoarce textul final prin onText.
+export function listenOnce(onText: (t: string) => void, onState: (on: boolean, partial: string) => void) {
+  const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (!SR) return null;
+  const r = new SR(); r.lang = "ro-RO"; r.continuous = false; r.interimResults = true;
+  let final = "";
+  r.onresult = (e: any) => { let interim = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) final += t; else interim += t; } onState(true, final || interim); };
+  r.onend = () => { onState(false, ""); if (final.trim()) onText(final.trim()); };
+  r.onerror = () => onState(false, "");
+  try { r.start(); onState(true, ""); } catch { return null; }
+  return () => r.stop();
+}
+export const canListen = typeof window !== "undefined" && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);

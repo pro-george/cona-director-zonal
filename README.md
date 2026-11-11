@@ -26,6 +26,7 @@ După orice modificare: `npm run build`, commit, push.
 - **Replanificări**: când vremea sau o livrare strică graficul, un grafic nou calculat din BIM, cu impactul pe termen și pe cost; se aplică doar după aprobare.
 - **Import de proiect**: bugetul și graficul din Excel sau CSV, fără format fix; coloanele se potrivesc după denumire și pot fi corectate înainte de import.
 - **Valoare**: ce a adus Autopilotul, în lei, pe patru categorii (zile de șantier, încasări, utilaje, timp), cu formula fiecărei sume și ipoteze editabile (`web/src/core/value.js`).
+- **Asistent vocal**: briefingul citit cu voce și comenzi spuse sau scrise (aprobă, respinge, aplică graficul, notează o sarcină, întrebări despre un șantier sau vreme). Aprobările și graficele cer confirmare. Regulile sunt în `web/src/core/commands.js`.
 - **Aprobări**: cererile din ERP, fiecare cu recomandare calculată față de bugetul rămas.
 - **Autopilot**: automatizările (pornit/oprit, rulare la cerere), documentele pregătite și jurnalul de acțiuni.
 - **Mai mult**: minute de ședință din dictare, sarcini, raportul către conducere, întrebări libere.

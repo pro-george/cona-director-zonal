@@ -11,6 +11,7 @@ import { seed, seedIfEmpty } from "./seed.js";
 import * as replan from "./replan.js";
 import { kindOf } from "./importer.js";
 import * as value from "./value.js";
+import * as commands from "./commands.js";
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -102,6 +103,8 @@ const ROUTES = [
     return { today, sites: sitesAll().map((s) => ({ id: s.id, name: s.name, location: s.location, ...wx.forecast(s.id), risks: wx.risksByDay(s.id, today), riskDays: wx.riskDays(s.id, today), replan: open.some((r) => r.site_id === s.id) })) };
   }],
   ["POST", "weather", { director: true }, async () => ({ result: await auto.runNow("weather"), replan: await auto.runNow("replan") })],
+  ["POST", "command", { director: true }, async ({ user, body }) => (body.confirm ? commands.confirm(body.confirm, user) : commands.interpret(String(body.text || "").slice(0, 500), user))],
+  ["GET", "brief/speech", { director: true }, () => ({ say: commands.briefSpeech() })],
   ["GET", "value", { director: true }, () => value.compute()],
   ["POST", "value", { director: true }, ({ body }) => { const bad = value.saveParams(body || {}); if (bad) fail(400, `Valoare nepotrivită la „${bad}”.`); return value.compute(); }],
 

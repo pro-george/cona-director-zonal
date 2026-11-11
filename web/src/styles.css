@@ -348,3 +348,11 @@ input[type=number] { border: 1px solid var(--line); border-radius: var(--radius)
   .col-main > .card.brief { order: 1; } .col-side > .tiles { order: 2; } .col-side > .stack { order: 3; }
   .col-main > .h { order: 4; } .col-main > .stack { order: 5; } .col-side > .ask { order: 6; } .content.azi > .foot { order: 7; }
 }
+
+/* asistent vocal */
+.voicebar { display: flex; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+.voicebar div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.check { flex-direction: row; align-items: center; gap: 10px; color: var(--ink); font-weight: 400; font-size: 14px; }
+.check input { width: 20px; height: 20px; accent-color: var(--brand); }
+.btn.listen { display: flex; align-items: center; justify-content: center; gap: 8px; }
+a.iconbtn { display: grid; place-items: center; }

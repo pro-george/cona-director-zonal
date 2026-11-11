@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { api, post, useLoad, dayShort, when } from "./api";
+import { useEffect, useRef, useState } from "react";
+import { api, post, useLoad, dayShort, when, speak, stopSpeaking, listenOnce, canSpeak, canListen } from "./api";
 import { Page, Card, H, Pill, Auto, Btn, Err, Loading, Empty, Dictate, Md, Icon, I, copy } from "./ui";
 
 export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
@@ -13,7 +13,7 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
         <L href="#/sedinte" t="Ședințe" d="Dictezi ce s-a discutat, primești minuta și sarcinile" />
         <L href="#/sarcini" t="Sarcini" d="Tot ce e deschis, pe responsabili și termene" />
         <L href="#/conducere" t="Raport pentru conducere" d="Ciorna săptămânală, scrisă din rapoarte, ERP și BIM" />
-        <L href="#/intreaba" t="Întreabă asistentul" d="Orice întrebare despre șantiere, bani sau termene" />
+        <L href="#/intreaba" t="Asistent vocal" d="Întrebări și comenzi cu vocea: aprobă, aplică graficul, notează o sarcină" />
         <L href="#/raport" t="Raport de șantier" d="Trimite tu un raport, dacă ai fost pe teren" />
       </div>
       <Btn kind="ghost" onClick={async () => { await post("/reset"); location.hash = "#/"; location.reload(); }}>Resetează datele demo</Btn>
@@ -97,22 +97,51 @@ export function Conducere() {
 }
 
 export function Intreaba({ q }: { q: string }) {
-  const [question, setQuestion] = useState(q), [log, setLog] = useState<any[]>([]), [busy, setBusy] = useState(false);
-  const ask = async (text: string) => {
-    const t = text.trim(); if (!t || busy) return;
-    setBusy(true); setQuestion("");
-    try { const r = await post("/ask", { question: t }); setLog((l) => [...l, { q: t, a: r.text, by: r.by }]); } catch (e: any) { setLog((l) => [...l, { q: t, a: e.message, err: true }]); }
+  const [text, setText] = useState(""), [log, setLog] = useState<any[]>([]), [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<any>(null), [voice, setVoice] = useState(canSpeak), [mic, setMic] = useState({ on: false, partial: "" });
+  const stopRef = useRef<null | (() => void)>(null);
+  const reply = (r: any, question?: string) => {
+    setLog((l) => [...l, { q: question, a: r.say, kind: r.kind }]);
+    setPending(r.kind === "confirm" ? r.confirm : null);
+    if (voice) speak(r.say);
+    if (r.kind === "navigate" && r.go) setTimeout(() => { location.hash = r.go; }, 500);
+  };
+  const send = async (raw: string) => {
+    const t = raw.trim(); if (!t || busy) return;
+    setText(""); stopSpeaking();
+    if (pending && /^(da|sigur|confirm|aproba|aplica|ok)\b/i.test(t.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) return confirm(true, t);
+    if (pending && /^(nu|anuleaza|renunta|stop)\b/i.test(t.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))) return confirm(false, t);
+    setBusy(true);
+    try { reply(await post("/command", { text: t }), t); } catch (e: any) { setLog((l) => [...l, { q: t, a: e.message, err: true }]); }
     setBusy(false);
   };
-  useEffect(() => { if (q) ask(q); }, []);
-  const ideas = ["Ce mă costă întârzierea de la hală?", "Unde cheltuim mai repede decât avansăm?", "Ce facturi sunt restante?", "Ce am de decis azi?"];
+  const confirm = async (yes: boolean, said?: string) => {
+    const c = pending; setPending(null);
+    if (!yes) { setLog((l) => [...l, { q: said, a: "Am renunțat. Nu s-a schimbat nimic.", kind: "answer" }]); if (voice) speak("Am renunțat."); return; }
+    setBusy(true);
+    try { reply(await post("/command", { confirm: c }), said || c.label); } catch (e: any) { setLog((l) => [...l, { q: said, a: e.message, err: true }]); }
+    setBusy(false);
+  };
+  const toggleMic = () => {
+    if (mic.on) { stopRef.current?.(); return; }
+    stopSpeaking();
+    stopRef.current = listenOnce(send, (on, partial) => setMic({ on, partial }));
+  };
+  useEffect(() => { if (q) send(q); return () => stopSpeaking(); }, []);
+  const ideas = ["Citește briefingul", "Ce e nou la hală?", "Aprobă macaraua", "Cum e vremea la depozit?", "Aplică graficul la campus", "Sarcină pentru Ioana: trimite oferta până vineri"];
   return (
-    <Page title="Întreabă asistentul" back="#/mai-mult" narrow>
-      <p className="small muted">Răspunde doar din datele aplicației: rapoarte, ERP și BIM.</p>
-      {log.length === 0 && !busy && <div className="chips">{ideas.map((i) => <button key={i} className="chip" onClick={() => ask(i)}>{i}</button>)}</div>}
-      <div className="stack tight">{log.map((m, i) => <div key={i} className="qa"><p className="q">{m.q}</p><Card className={m.err ? "over" : ""}><Md text={m.a} />{m.by === "demo" && <span className="small muted">Răspuns compus din reguli (mod demo).</span>}</Card></div>)}</div>
+    <Page title="Asistent" eyebrow="Întreabă sau dă o comandă" back="#/" narrow>
+      <div className="voicebar">
+        {canListen ? <button type="button" className={"mic" + (mic.on ? " rec" : "")} onClick={toggleMic} aria-label={mic.on ? "Oprește ascultarea" : "Dă o comandă cu vocea"}><Icon d={I.mic} size={28} /></button> : null}
+        <div><strong>{mic.on ? mic.partial || "Ascult…" : canListen ? "Apasă și spune comanda" : "Scrie comanda mai jos"}</strong>
+          <span className="small muted">{canListen ? "Aprobările și graficele cer confirmare: spui „da” sau „nu”." : "Acest browser nu are recunoaștere vocală."}</span></div>
+      </div>
+      {canSpeak && <label className="check"><input type="checkbox" checked={voice} onChange={(e) => { setVoice(e.target.checked); if (!e.target.checked) stopSpeaking(); }} />Răspunde și cu voce</label>}
+      {log.length === 0 && !busy && <div className="chips">{ideas.map((i) => <button key={i} className="chip" onClick={() => send(i)}>{i}</button>)}</div>}
+      <div className="stack tight">{log.map((m, i) => <div key={i} className="qa">{m.q && <p className="q">{m.q}</p>}<Card className={m.err ? "over" : ""}>{m.kind === "done" && <Auto>făcut</Auto>}<Md text={m.a} /></Card></div>)}</div>
+      {pending && <div className="row two"><Btn kind="ghost" onClick={() => confirm(false)}>Nu</Btn><Btn onClick={() => confirm(true)}>{pending.label}</Btn></div>}
       {busy && <Loading />}
-      <form className="ask" onSubmit={(e) => { e.preventDefault(); ask(question); }}><label htmlFor="aq" className="sr">Întrebarea ta</label><input id="aq" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Scrie întrebarea…" /><button className="iconbtn solid" aria-label="Trimite"><Icon d={I.send} size={18} /></button></form>
+      <form className="ask" onSubmit={(e) => { e.preventDefault(); send(text); }}><label htmlFor="aq" className="sr">Întrebare sau comandă</label><input id="aq" value={text} onChange={(e) => setText(e.target.value)} placeholder={pending ? "Scrie da sau nu…" : "Scrie o întrebare sau o comandă…"} /><button className="iconbtn solid" aria-label="Trimite"><Icon d={I.send} size={18} /></button></form>
     </Page>
   );
 }

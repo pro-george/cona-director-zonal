@@ -17,6 +17,8 @@ export const I = {
   mic: "M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3",
   plus: "M12 5v14M5 12h14",
   send: "M4 12l16-8-6 16-3-7z",
+  play: "M7 5l12 7-12 7z",
+  stop: "M7 7h10v10H7z",
 };
 
 export const Pill = ({ s }: { s: string }) => <span className={"pill s-" + (STATUS[s] ? s : "none")}>{STATUS[s] || STATUS.none}</span>;

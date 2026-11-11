@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { post, useLoad, lei, mil, pct, dayLong, dayShort, time, mins, when } from "./api";
+import { api, post, useLoad, lei, mil, pct, dayLong, dayShort, time, mins, when, speak, stopSpeaking, canSpeak } from "./api";
 import { Page, Card, H, Pill, Src, Auto, Bar, Btn, Err, Loading, Empty, Icon, I, STATUS } from "./ui";
 import { Brand } from "./App";
 
@@ -37,7 +37,8 @@ export function Alert({ a, showSite = true }: { a: any; showSite?: boolean }) {
 
 export function Azi({ me, logout }: { me: any; logout: () => void }) {
   const { data, err, reload } = useLoad<any>("/home");
-  const [more, setMore] = useState(false), [q, setQ] = useState("");
+  const [more, setMore] = useState(false), [q, setQ] = useState(""), [reading, setReading] = useState(false);
+  const listen = async () => { if (reading) { stopSpeaking(); setReading(false); return; } const r = await api("/brief/speech"); setReading(true); speak(r.say, () => setReading(false)); };
   if (!data) return err ? <div className="content"><Err msg={err} /></div> : <div className="splash" />;
   const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hour12: false }).format(new Date()));
   const hello = h < 11 ? "Bună dimineața" : h < 18 ? "Bună ziua" : "Bună seara";
@@ -66,6 +67,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
               {decisions.length > 3 ? <button className="link" onClick={() => setMore(!more)}>{more ? "Arată mai puține" : `Încă ${decisions.length - 3} decizii`}</button> : <span />}
               <button className="link" onClick={async () => { await post("/brief"); await reload(); }}>Rescrie</button>
             </div>
+            {canSpeak && <button className="btn ghost listen" onClick={listen}><Icon d={reading ? I.stop : I.play} size={18} />{reading ? "Oprește citirea" : "Ascultă briefingul"}</button>}
           </> : <><Empty>Briefingul de azi nu a fost scris încă.</Empty><Btn onClick={async () => { await post("/brief"); await reload(); }}>Scrie briefingul</Btn></>}
         </Card>
 
@@ -89,8 +91,8 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
 
         <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) location.hash = "#/intreaba/" + encodeURIComponent(q.trim()); }}>
           <label htmlFor="askq" className="sr">Întreabă asistentul</label>
-          <input id="askq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Întreabă orice despre zonă…" />
-          <button className="iconbtn solid" aria-label="Trimite întrebarea"><Icon d={I.send} size={18} /></button>
+          <input id="askq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Întreabă sau dă o comandă…" />
+          {q.trim() ? <button className="iconbtn solid" aria-label="Trimite"><Icon d={I.send} size={18} /></button> : <a className="iconbtn solid" href="#/intreaba" aria-label="Deschide asistentul vocal"><Icon d={I.mic} size={18} /></a>}
         </form>
         </div>
         <p className="foot">Date demonstrative. ERP și BIM simulate.</p>
