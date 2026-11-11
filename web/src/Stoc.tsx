@@ -67,7 +67,7 @@ export function Stocuri({ me, logout }: { me: any; logout?: () => void }) {
                 <div className="row"><button className="link" onClick={() => itemForm(undefined, l.id)}>Adaugă articol</button><button className="link" onClick={() => locForm(l)}>Modifică locația</button></div>
               </>}
             </Card>; })}
-          {data.locations.length > 0 && <div className="row two"><Btn kind="ghost" onClick={() => locForm()}>Locație nouă</Btn><Btn onClick={() => orderForm()}>Comandă pentru șantier</Btn></div>}
+          {data.locations.length > 0 && <div className="row two"><Btn kind="ghost" onClick={() => locForm()}>Locație nouă</Btn><Btn onClick={() => orderForm()}>Comandă</Btn></div>}
           <p className="small muted">Liniuța de pe bară este stocul minim. Partea mai deschisă este marfă rezervată pentru comenzi confirmate. <Src>gestiune simulată</Src></p>
         </>}
 

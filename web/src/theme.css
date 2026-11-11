@@ -15,7 +15,8 @@
   --warn: #946c12; --warn-bg: #f7f0dc;
   --crit: #a8443c; --crit-bg: #f8e9e6;
   --none: #7b858d; --none-bg: #eef0f2;
-  --font: "Titillium Web", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: "neue-haas-grotesk-text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "neue-haas-grotesk-display", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --radius: 12px;
   color-scheme: light;
 }

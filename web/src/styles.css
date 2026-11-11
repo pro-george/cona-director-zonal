@@ -486,3 +486,6 @@ ul.stock li { gap: 4px; }
   .tiles.four .tile b { font-size: 24px; } .tiles.four .tile b.sm { font-size: 15px; line-height: 1.9; }
   .segctl button { font-size: 12.5px; }
 }
+
+/* Neue Haas Grotesk: tăietura Display doar pentru titlul mare și cifrele mari, Text pentru rest */
+h1, .tile b, .apstats b, .kpis b, .valrow b { font-family: var(--font-display); word-spacing: .06em; letter-spacing: .005em; }
