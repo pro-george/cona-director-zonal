@@ -4,8 +4,8 @@ import { exec, run, one, dayOf, addDays } from "./db.js";
 
 // Datele demo se reîmprospătează singure când se schimbă versiunea lor. Odată ce omul a trecut pe datele lui
 // (mode = "own"), aplicația nu mai șterge și nu mai rescrie nimic la actualizări.
-const SEED_VERSION = 5;
-const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
+const SEED_VERSION = 7;
+const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "delays", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
 const get = (key) => { const r = one("SELECT value FROM settings WHERE key=?", key); return r ? r.value : null; };
 export const mode = () => (get("mode") === '"own"' ? "own" : "demo");
 export function seedIfEmpty() {
@@ -29,7 +29,7 @@ export function seed() {
   const m = { hala: user("Andrei Pop", "sef1@demo.local", "sef", "hala"), fabrica: user("Mihai Rusu", "sef2@demo.local", "sef", "fabrica"), depozit: user("Ioana Dan", "sef3@demo.local", "sef", "depozit"), campus: user("Radu Stan", "sef4@demo.local", "sef", "campus") };
 
   const site = (id, name, location, client, contract, start, finish, ord, lat, lon) => run("INSERT INTO sites VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, name, location, client, m[id], contract, start, finish, ord, lat, lon);
-  site("hala", "Hală logistică 18.000 mp", "Sibiu Vest", "Logistic Park Demo SRL", 21500000, d(-70), d(95), 1, 45.79, 24.12);
+  site("hala", "Hală logistică 18.000 mp", "Sibiu Vest", "Logistic Park Demo SRL", 21500000, d(-70), d(32), 1, 45.79, 24.12);
   site("fabrica", "Fabrică componente auto", "Sebeș", "Auto Components Demo SRL", 34000000, d(-45), d(210), 2, 45.96, 23.57);
   site("depozit", "Extindere depozit frigorific", "Alba Iulia", "FrigoDemo SA", 9800000, d(-110), d(40), 3, 46.07, 23.57);
   site("campus", "Campus învățământ dual", "Mediaș", "Primăria Demo", 16200000, d(-150), d(180), 4, 46.16, 24.35);
@@ -102,6 +102,13 @@ export function seed() {
   K("fabrica", mid, "Trimite beneficiarului graficul actualizat", "Mihai Rusu", d(-2), "meeting:" + mid);
   K("fabrica", mid, "Predă dirigintelui buletinele de încercări pentru beton", "Mihai Rusu", d(1), "meeting:" + mid + ":b");
   K("depozit", null, "Verifică oferta de preț pentru mutarea ușilor de andocare", "Cristian", d(1), "manual:seed1");
+
+  /* ----- întârzieri mai vechi, ca dosarul să aibă istoric ----- */
+  const Y = (s, n, cause, title, days, type, txt) => run("INSERT INTO delays(site_id,day,cause,title,detail,evidence,source_ref,days,status) VALUES(?,?,?,?,?,?,?,?,'deschis')", s, d(n), cause, title, "", JSON.stringify([{ type, ref: "seed", text: txt }]), `auto:${s}:${d(n)}:${cause}`, days);
+  Y("hala", -9, "vreme", "Vreme nefavorabilă: rafale de 61 km/h (limită 50)", 1, "Meteo", `Date demonstrative, ${d(-9)}: rafale 61 km/h. Lucrări oprite: montaj cu macaraua (Axe A–B).`);
+  Y("depozit", -6, "beneficiar", "Planșa revizuită pentru fațada nord nu a fost predată", 1, "Raport de șantier", `Ioana Dan, ${d(-6)}: „Așteptăm planșa revizuită de la proiectantul beneficiarului; nu putem trasa golurile.”`);
+  Y("campus", -12, "vreme", "Vreme nefavorabilă: minimă de -4°C (îngheț)", 1, "Meteo", `Date demonstrative, ${d(-12)}: minimă -4°C. Lucrări oprite: zidărie și structură (Corp B).`);
+  run("INSERT INTO settings(key,value) VALUES('claim_notice:depozit','10')");
 
   run("INSERT INTO settings(key,value) VALUES('autoapprove_limit','3000')");
   run("INSERT INTO settings(key,value) VALUES('seed_version',?)", String(SEED_VERSION));

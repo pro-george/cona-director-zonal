@@ -5,6 +5,7 @@ import { Azi, Alerte, Meteo, Santiere, Santier } from "./Director";
 import { Aprobari, Autopilot, Replanificari, Valoare } from "./Work";
 import { ImportProiect } from "./Import";
 import { AddMenu, Echipa, Invitatie, Primit } from "./Edit";
+import { Dosare, Dosar } from "./Dosar";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
@@ -52,7 +53,7 @@ export default function App() {
   if (user.role !== "director") return <SefHome me={me.data} route={route} logout={logout} />;
 
   const [page, arg] = route;
-  const tab = ["santiere", "santier", "import"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa"].includes(page) ? "mai-mult" : "azi";
+  const tab = ["santiere", "santier", "import", "dosar"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa", "dosare"].includes(page) ? "mai-mult" : "azi";
   let screen;
   switch (page) {
     case "alerte": screen = <Alerte />; break;
@@ -61,6 +62,8 @@ export default function App() {
     case "import": screen = <ImportProiect />; break;
     case "valoare": screen = <Valoare />; break;
     case "echipa": screen = <Echipa />; break;
+    case "dosare": screen = <Dosare />; break;
+    case "dosar": screen = <Dosar id={arg} />; break;
     case "santiere": screen = <Santiere />; break;
     case "santier": screen = <Santier id={arg} />; break;
     case "aprobari": screen = <Aprobari />; break;

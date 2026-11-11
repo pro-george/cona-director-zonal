@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS erp_receivables (id INTEGER PRIMARY KEY, site_id TEXT
 CREATE TABLE IF NOT EXISTS erp_approvals (id INTEGER PRIMARY KEY, site_id TEXT, type TEXT, title TEXT, supplier TEXT, amount REAL, category TEXT, requested_by TEXT, created TEXT, status TEXT, decided_at INTEGER, decided_by TEXT, note TEXT, rec TEXT, rec_reason TEXT, auto INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS erp_equipment (id INTEGER PRIMARY KEY, site_id TEXT, name TEXT, daily_cost REAL, status TEXT);
 CREATE TABLE IF NOT EXISTS replans (id INTEGER PRIMARY KEY, ts INTEGER, site_id TEXT, sig TEXT, data TEXT, status TEXT, decided_at INTEGER, decided_by TEXT);
+CREATE TABLE IF NOT EXISTS delays (id INTEGER PRIMARY KEY, site_id TEXT, day TEXT, cause TEXT, title TEXT, detail TEXT, evidence TEXT, source_ref TEXT, days REAL, status TEXT, notified_at INTEGER);
 -- BIM simulat
 CREATE TABLE IF NOT EXISTS bim_elements (id INTEGER PRIMARY KEY, site_id TEXT, code TEXT, kind TEXT, zone TEXT, planned TEXT, baseline TEXT, status TEXT, mounted_on TEXT);
 CREATE TABLE IF NOT EXISTS bim_deliveries (id INTEGER PRIMARY KEY, site_id TEXT, planned TEXT, eta TEXT, truck TEXT, kind TEXT, zone TEXT, count INTEGER, status TEXT, note TEXT);

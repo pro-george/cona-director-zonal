@@ -40,3 +40,22 @@ export function applyPlan(siteId, changes) {
   for (const [id, day] of Object.entries(changes)) run("UPDATE bim_elements SET planned=? WHERE id=? AND site_id=? AND status!='montat'", day, Number(id), siteId);
   run("UPDATE bim_deliveries SET planned=eta, status='planificat', note='Replanificat pe data estimată.' WHERE site_id=? AND status='intarziat' AND eta IS NOT NULL", siteId);
 }
+
+// Data reală de predare: extrapolare liniară din ritmul de montaj al ultimelor 14 zile.
+// E o estimare simplă și transparentă, nu un grafic de execuție: nu știe de dependențe, echipe sau sezon.
+export function forecast(site, today) {
+  const els = q("SELECT planned, baseline, status, mounted_on FROM bim_elements WHERE site_id=?", site.id);
+  const total = els.length, done = els.filter((e) => e.status === "montat"), mounted = done.length, remaining = total - mounted;
+  if (!total) return null;
+  const add = (day, n) => { const d = new Date(day + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const diff = (a, b) => Math.round((new Date(b + "T12:00:00Z") - new Date(a + "T12:00:00Z")) / 86400000);
+  const from = add(today, -14), recent = done.filter((e) => e.mounted_on && e.mounted_on > from && e.mounted_on <= today).length;
+  const first = done.map((e) => e.mounted_on).filter(Boolean).sort()[0];
+  const pace = recent > 0 ? recent / 14 : first && diff(first, today) > 0 ? mounted / diff(first, today) : 0;
+  const lastPlanned = els.reduce((m, e) => (e.planned > m ? e.planned : m), ""), lastBaseline = els.reduce((m, e) => ((e.baseline || e.planned) > m ? e.baseline || e.planned : m), "");
+  const date = remaining === 0 ? today : pace > 0 ? add(today, Math.ceil(remaining / pace)) : null;
+  const left = Math.max(1, diff(today, site.finish));
+  const cum = (dates) => { const s = dates.filter(Boolean).sort(), step = Math.max(1, Math.ceil(s.length / 40)), pts = []; s.forEach((d, i) => { if (i % step === 0 || i === s.length - 1) pts.push([d, i + 1]); }); return pts; };
+  return { total, mounted, remaining, pace, recent, date, lastPlanned, lastBaseline, deadline: site.finish, vsDeadline: date ? diff(site.finish, date) : null, vsPlan: date ? diff(lastPlanned, date) : null,
+    neededPace: remaining / left, today, planned: cum(els.map((e) => e.baseline || e.planned)), actual: cum(done.map((e) => e.mounted_on)) };
+}

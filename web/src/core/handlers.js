@@ -14,6 +14,9 @@ import * as value from "./value.js";
 import * as commands from "./commands.js";
 import * as crud from "./crud.js";
 import * as share from "./share.js";
+import * as delays from "./delays.js";
+import { useDeadlines } from "./data.js";
+useDeadlines(delays.deadlineAlerts);
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -74,7 +77,7 @@ const ROUTES = [
       weather: (() => { const list = sitesAll().map((s) => wx.riskDays(s.id, today)); return { sites: list.filter((n) => n > 0).length, days: list.reduce((a, n) => a + n, 0) }; })(),
       waiting: { approvals: erp.approvals("pending").length, drafts: one("SELECT COUNT(*) n FROM drafts WHERE status='draft'").n, overdue: one("SELECT COUNT(*) n FROM tasks WHERE status='open' AND due<?", today).n, replans: replan.openCount(), open: one("SELECT COUNT(*) n FROM tasks WHERE status='open'").n },
       sites: sitesAll().map((s) => { const r = reports[s.id], p = bim.physical(s.id, today), f = erp.financeSummary(s, today);
-        return { id: s.id, name: s.name, location: s.location, manager: s.manager, status: r ? r.status : "none", summary: r?.summary || "", workers: r?.workers ?? null, reportDay: r?.day || null, realPct: p.realPct, planPct: p.planPct, spentPct: f.spentPct, wx: wx.forecast(s.id).days.find((d) => d.day === today) || null, riskDays: wx.riskDays(s.id, today) }; }),
+        return { id: s.id, name: s.name, location: s.location, manager: s.manager, status: r ? r.status : "none", summary: r?.summary || "", workers: r?.workers ?? null, reportDay: r?.day || null, realPct: p.realPct, planPct: p.planPct, spentPct: f.spentPct, forecast: (() => { const x = bim.forecast(s, today); return x ? { date: x.date, vsDeadline: x.vsDeadline } : null; })(), wx: wx.forecast(s.id).days.find((d) => d.day === today) || null, riskDays: wx.riskDays(s.id, today) }; }),
     };
   }],
   ["POST", "brief", { director: true }, async () => { await auto.runNow("brief"); const b = one("SELECT * FROM briefs WHERE day=?", dayOf()); return { brief: { ...J(b.data, {}), ts: b.ts } }; }],
@@ -86,6 +89,7 @@ const ROUTES = [
       reports: q("SELECT * FROM reports WHERE site_id=? ORDER BY ts DESC LIMIT 10", s.id).map(reportRow),
       tasks: q("SELECT * FROM tasks WHERE site_id=? AND status='open' ORDER BY due", s.id), alerts: alerts(today).filter((a) => a.site_id === s.id),
       replan: replan.list().find((r) => r.site_id === s.id && r.status === "proposed") || null,
+      forecast: bim.forecast(s, today), delays: (() => { const x = delays.summary(s.id, today); return { total: x.total, claimDays: x.claimDays, cost: x.cost, events: x.rows.length, urgent: x.urgent }; })(),
       equipment: q("SELECT * FROM erp_equipment WHERE site_id=? ORDER BY id", s.id), team: q("SELECT id, name FROM users WHERE role='sef' ORDER BY name") };
   }],
 
@@ -137,6 +141,13 @@ const ROUTES = [
   ["GET", "team", { director: true }, () => ({ users: q("SELECT u.id,u.name,u.role,u.site_id,s.name AS site FROM users u LEFT JOIN sites s ON s.id=u.site_id ORDER BY u.id"), sites: sitesAll().map((s) => ({ id: s.id, name: s.name })) })],
   ["POST", "team", { director: true }, ({ body }) => ({ id: crud.createUser(body) })],
   ["POST", "team/:id/delete", { director: true }, ({ params }) => { crud.removeUser(params.id); return { ok: true }; }],
+
+  /* ----- dosar de întârzieri și data reală de predare ----- */
+  ["GET", "delays", { director: true }, () => ({ sites: delays.overview() })],
+  ["GET", "delays/:site", { director: true }, ({ params }) => { const s = siteById(params.site) || fail(404, "Proiectul nu există."); return { site: { id: s.id, name: s.name, client: s.client, finish: s.finish }, causes: delays.CAUSES, ...delays.summary(s.id) }; }],
+  ["POST", "delays/:site", { director: true }, ({ params, body }) => { if ("noticeDays" in body) { delays.setNotice(params.site, body.noticeDays); return { ok: true }; } const bad = delays.save(params.site, body.id, body); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "delays/:site/:id", { director: true }, ({ params, body }) => { body.delete ? delays.remove(params.id) : delays.setStatus(params.id, body.status); return { ok: true }; }],
+  ["GET", "delays/:site/dossier", { director: true }, ({ params }) => ({ text: delays.dossierText(params.site) })],
 
   ["GET", "weather", { director: true }, () => {
     const today = dayOf(), open = replan.list().filter((r) => r.status === "proposed");

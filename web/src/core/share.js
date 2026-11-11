@@ -19,10 +19,10 @@ export function inviteLink(siteId) {
 export function join(payload, name) {
   const p = dec(payload);
   if (!p || p.t !== "inv" || !p.site?.id) return null;
-  for (const t of ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"]) exec(`DELETE FROM ${t}`);
+  for (const t of ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "delays", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"]) exec(`DELETE FROM ${t}`);
   const uid = Number(run("INSERT INTO users(name,email,role,pass,site_id) VALUES(?,?,?,?,?)", text(name || p.sef, 60) || "Șef de șantier", "sef@local", "sef", "", text(p.site.id, 40)).lastInsertRowid);
   run("INSERT INTO sites(id,name,location,client,manager_id,contract,start,finish,ord,lat,lon) VALUES(?,?,?,?,?,?,?,?,?,?,?)", text(p.site.id, 40), text(p.site.name, 80), text(p.site.location, 60), "", uid, 0, dayOf(), dayOf(), 1, null, null);
-  for (const [k, v] of [["mode", "own"], ["device", "sef"], ["director", text(p.director, 60)], ["seed_version", 5]]) run("INSERT INTO settings(key,value) VALUES(?,?)", k, JSON.stringify(v));
+  for (const [k, v] of [["mode", "own"], ["device", "sef"], ["director", text(p.director, 60)], ["seed_version", 7]]) run("INSERT INTO settings(key,value) VALUES(?,?)", k, JSON.stringify(v));
   return { uid, site: p.site.name };
 }
 

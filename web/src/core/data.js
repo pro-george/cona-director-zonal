@@ -40,6 +40,7 @@ export function alerts(today = dayOf()) {
     out.push({ sev: "warn", source: "Sarcini", site_id: t.site_id, site: t.site || "", text: `Sarcină întârziată cu ${daysBetween(t.due, today)} zile: ${t.title} (${t.owner}).` });
   for (const a of erp.approvals("pending").filter((a) => daysBetween(a.created, today) >= 2))
     out.push({ sev: "warn", source: "ERP", site_id: a.site_id, site: siteById(a.site_id)?.name || "", text: `Aprobare în așteptare de ${daysBetween(a.created, today)} zile: ${a.title}.` });
+  for (const a of _deadlines ? _deadlines(today) : []) out.push(a);
   return out.sort((a, b) => (a.sev === b.sev ? 0 : a.sev === "crit" ? -1 : 1));
 }
 
@@ -69,3 +70,6 @@ export function zoneContext(today = dayOf()) {
 const fmt = (n) => new Intl.NumberFormat("ro-RO", { maximumFractionDigits: 0 }).format(Math.round(n));
 const pct = (x) => Math.round(x * 100) + "%";
 const shortDay = (d) => new Intl.DateTimeFormat("ro-RO", { timeZone: "UTC", weekday: "long", day: "numeric", month: "short" }).format(new Date(d + "T12:00:00Z")).replace(/^./, (c) => c.toUpperCase());
+// Legat din handlers.js, ca să nu existe import circular între data.js și delays.js.
+let _deadlines = null;
+export const useDeadlines = (fn) => { _deadlines = fn; };

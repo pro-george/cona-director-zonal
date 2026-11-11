@@ -388,3 +388,22 @@ ul.plain li.tap:hover { background: var(--surface-2); }
 
 .linkbox { font-size: 12px; color: var(--muted); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; word-break: break-all; max-height: 76px; overflow: hidden; }
 a.foot.link { align-self: center; text-align: center; }
+
+/* data reală de predare și dosarul de întârzieri */
+.forecast svg { width: 100%; height: auto; display: block; background: var(--surface-2); border-radius: 10px; }
+.c-plan { fill: none; stroke: var(--none); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.c-real { fill: none; stroke: var(--brand); stroke-width: 2.5; stroke-linejoin: round; }
+.c-proj { fill: none; stroke: var(--brand); stroke-width: 2; stroke-dasharray: 6 4; }
+.c-dot { fill: var(--brand); }
+.c-today { stroke: var(--line); stroke-width: 1; }
+.c-deadline { stroke: var(--crit); stroke-width: 1.5; }
+.legendline { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.k { display: inline-block; width: 18px; height: 0; border-top: 2.5px solid var(--brand); margin-right: -8px; }
+.k-plan { border-top: 1.5px dashed var(--none); } .k-proj { border-top: 2px dashed var(--brand); } .k-dead { border-top-color: var(--crit); width: 10px; }
+.legendline .k { margin-right: 4px; }
+.navrow.warnrow { border-color: var(--crit-bg); background: color-mix(in srgb, var(--crit-bg) 50%, var(--surface)); }
+.causes { list-style: none; padding: 0 !important; gap: 8px !important; }
+.causes li { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: center; }
+.timeline { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.timeline li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.evid { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }

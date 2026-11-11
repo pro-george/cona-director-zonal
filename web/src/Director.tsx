@@ -3,6 +3,7 @@ import { api, post, useLoad, lei, mil, pct, dayLong, dayShort, time, mins, when,
 import { Page, Card, H, Pill, Src, Auto, Bar, Btn, Err, Loading, Empty, Icon, I, STATUS } from "./ui";
 import { Brand } from "./App";
 import { Sheet, F, ShareBox } from "./Edit";
+import { ForecastCard } from "./Dosar";
 
 const order: any = { critic: 0, atentie: 1, ok: 2, none: 3 };
 
@@ -18,6 +19,7 @@ function SiteRow({ s, compact }: { s: any; compact?: boolean }) {
       <div className="siterow-top"><Pill s={s.status} /><span className="muted small">{s.location}{s.workers != null ? " · " + s.workers + " oameni" : ""}</span></div>
       <strong>{s.name}</strong>
       {s.summary && <p className="clamp">{s.summary}</p>}
+      {s.forecast?.date && <span className={"small " + (s.forecast.vsDeadline > 0 ? "t-crit" : "muted")}>Predare estimată: {dayShort(s.forecast.date)} ({s.forecast.vsDeadline > 0 ? "+" + s.forecast.vsDeadline + " zile față de termen" : -s.forecast.vsDeadline + " zile înainte de termen"})</span>}
       {s.wx && <span className="small muted wxline">Meteo azi: {s.wx.tmin}…{s.wx.tmax}°C, rafale {s.wx.gust} km/h{s.wx.rain >= 1 ? ", ploaie " + s.wx.rain + " mm" : ""}{s.riskDays > 0 && <b className="wxrisk">{s.riskDays} {s.riskDays === 1 ? "zi cu risc" : "zile cu risc"} în 7 zile</b>}</span>}
       <div className="twobars">
         <div><span className="small muted">Fizic {pct(s.realPct)} <em>plan {pct(s.planPct)}</em></span><Bar value={s.realPct} plan={s.planPct} tone={s.realPct + 0.02 < s.planPct ? "warn" : "ok"} label="Stadiu fizic față de plan" /></div>
@@ -142,7 +144,7 @@ export function Santier({ id }: { id: string }) {
     onSave: async (v: any) => { await post(item ? `/rows/${entity}/${item.id}` : `/sites/${id}/rows/${entity}`, v); await reload(); },
     onDelete: item ? async () => { await post(`/rows/${entity}/${item.id}/delete`); await reload(); } : undefined });
   if (!data) return <Page title="Șantier" back="#/santiere">{err ? <Err msg={err} /> : <Loading />}</Page>;
-  const { site, finance: f, physical: p, deliveries, reports, tasks, alerts, weather: w, replan, equipment, team } = data;
+  const { site, finance: f, physical: p, deliveries, reports, tasks, alerts, weather: w, replan, equipment, team, forecast: fc, delays: dl } = data;
   const people = ["Cristian", ...team.map((u: any) => u.name)].filter((n, i, a) => a.indexOf(n) === i), zonesList = p.zones.map((z: any) => z.zone), today = new Date().toISOString().slice(0, 10);
   const editProject = () => setSheet({ title: "Editează proiectul", fields: F.project(team), initial: { ...site, manager_id: site.manager_id || "" }, onSave: async (v: any) => { await post("/projects/" + id, v); await reload(); }, onDelete: async () => { await post(`/projects/${id}/delete`); location.hash = "#/santiere"; } });
   const Add = ({ children, on }: any) => <button className="addrow" onClick={on}><Icon d={I.plus} size={16} />{children}</button>;
@@ -161,6 +163,8 @@ export function Santier({ id }: { id: string }) {
           <p>{last ? last.summary : "Niciun raport primit."}</p>
           <div className="kpis"><div><b>{pct(p.realPct)}</b><span>montat (plan {pct(p.planPct)})</span></div><div><b>{pct(f.spentPct)}</b><span>buget cheltuit</span></div><div><b>{last?.workers ?? "–"}</b><span>oameni pe șantier</span></div></div>
         </Card>
+        {fc?.date && fc.remaining > 0 && <button className={"navrow" + (fc.vsDeadline > 0 ? " warnrow" : "")} onClick={() => setTab("stadiu")}><div><strong>Predare estimată: {dayShort(fc.date)}</strong><span className="small muted">{fc.vsDeadline > 0 ? `Cu ${fc.vsDeadline} zile după termenul contractual` : `Cu ${-fc.vsDeadline} zile înainte de termen`}, în ritmul de acum</span></div><Icon d={I.chev} size={18} /></button>}
+        <a className="navrow" href={"#/dosar/" + id}><div><strong>Dosar de întârzieri: {String(Math.round(dl.total * 10) / 10).replace(".", ",")} zile</strong><span className="small muted">{dl.events ? `${String(dl.claimDays).replace(".", ",")} revendicabile la beneficiar · ${lei(dl.cost)}` : "Nicio întârziere înregistrată"}{dl.urgent ? ` · ${dl.urgent} de notificat` : ""}</span></div><Icon d={I.chev} size={18} /></a>
         <H>Alerte</H>
         {alerts.length ? <ul className="alerts">{alerts.map((a: any, i: number) => <li key={i} className={"alert sev-" + a.sev}><div><Src>{a.source}</Src></div><p>{a.text}</p></li>)}</ul> : <Empty>Nicio alertă pe acest șantier.</Empty>}
         <H>Sarcini deschise</H>
@@ -209,6 +213,7 @@ export function Santier({ id }: { id: string }) {
           <Bar value={p.realPct} plan={p.planPct} tone={p.lag ? "warn" : "ok"} label="Montat față de plan" />
           {p.replanned > 0 && <p className="small muted">Grafic replanificat: {p.replanned} elemente mutate, cu cel mult {p.slip} zile față de graficul inițial.</p>}
         </Card>
+        <ForecastCard f={fc} />
         <H>Pe zone</H>
         <div className="zones">{p.zones.map((z: any) => <div key={z.zone} role="button" tabIndex={0} className={"zone tap z-" + z.state} onClick={() => setSheet({ title: "Zonă: " + z.zone, fields: F.zoneEdit(z.total), initial: { zone: z.zone, mounted: z.mounted, start: z.start || "", end: z.end || "" }, note: "Actualizează câte elemente sunt montate sau mută restul lucrărilor.",
           onSave: async (v: any) => { await post(`/sites/${id}/zones`, { ...v, old: z.zone }); await reload(); }, onDelete: async () => { await post(`/sites/${id}/zones/delete`, { zone: z.zone }); await reload(); } })}><strong>{z.zone}</strong><b>{z.mounted}/{z.total}</b><span>{ZS[z.state]}{z.state === "intarziat" ? ` · ${z.due - z.mounted} în urmă` : ""}</span></div>)}</div>
