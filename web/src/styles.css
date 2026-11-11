@@ -356,3 +356,32 @@ input[type=number] { border: 1px solid var(--line); border-radius: var(--radius)
 .check input { width: 20px; height: 20px; accent-color: var(--brand); }
 .btn.listen { display: flex; align-items: center; justify-content: center; gap: 8px; }
 a.iconbtn { display: grid; place-items: center; }
+
+/* ---------- adăugare și modificare ---------- */
+.scrim { position: fixed; inset: 0; background: rgba(15, 25, 33, .42); display: flex; align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet { background: var(--surface); width: 100%; max-width: 560px; max-height: 92%; overflow-y: auto; border-radius: 20px 20px 0 0; padding: 18px 20px 26px; display: flex; flex-direction: column; gap: 14px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sheet-head h2 { font-size: 20px; font-weight: 700; }
+.sheet .hint { font-weight: 400; }
+.sheet input[type=date] { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 11px 12px; width: 100%; color: var(--ink); font-weight: 400; min-height: 46px; }
+.btn.danger { background: var(--crit); border-color: var(--crit); color: #fff; }
+.link.danger { color: var(--crit); align-self: center; }
+.tap { cursor: pointer; }
+.tap:hover { border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); }
+ul.plain li.tap:hover { background: var(--surface-2); }
+.addrow { display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px dashed var(--line); background: transparent; color: var(--brand); font-weight: 700; border-radius: var(--radius); padding: 12px; min-height: 48px; }
+.addrow:hover { background: var(--tint); border-color: var(--tint); }
+.tasks li { display: flex; align-items: flex-start; }
+.tasks label { flex: 1; min-width: 0; }
+.iconbtn.bare { border: 0; background: transparent; color: var(--muted); margin: 6px 6px 0 0; }
+.fab { position: fixed; right: 18px; bottom: 84px; z-index: 5; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--brand); color: var(--brand-ink); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0, 73, 135, .28); }
+.fab span { display: none; }
+@media (min-width: 1000px) {
+  .scrim { align-items: center; }
+  .sheet { border-radius: 16px; max-height: 88%; }
+  .fab { position: fixed; left: 14px; right: auto; top: 64px; bottom: auto; width: 204px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; box-shadow: none; }
+  .fab span { display: inline; }
+  .side-brand { padding-bottom: 66px; }
+}
+
+.filebtn { display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--brand); font-size: 16px; }

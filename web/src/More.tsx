@@ -1,12 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { api, post, useLoad, dayShort, when, speak, stopSpeaking, listenOnce, canSpeak, canListen } from "./api";
 import { Page, Card, H, Pill, Auto, Btn, Err, Loading, Empty, Dictate, Md, Icon, I, copy } from "./ui";
+import { Sheet, F } from "./Edit";
+// @ts-ignore: modul JavaScript
+import { exportBytes, importBytes } from "./core/db.js";
 
 export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
+  const [own, setOwn] = useState(false), [msg, setMsg] = useState("");
+  const backup = async () => {
+    const blob = new Blob([exportBytes()], { type: "application/octet-stream" }), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `director-zonal-${new Date().toISOString().slice(0, 10)}.db`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    setMsg("Copia a fost descărcată. Păstreaz-o într-un loc sigur: conține toate datele.");
+  };
+  const restore = async (file?: File) => { if (!file) return; try { await importBytes(new Uint8Array(await file.arrayBuffer())); location.hash = "#/"; location.reload(); } catch (e: any) { setMsg(e.message || "Fișierul nu a putut fi citit."); } };
   const L = ({ href, t, d }: any) => <a className="navrow" href={href}><div><strong>{t}</strong><span className="small muted">{d}</span></div><Icon d={I.chev} size={18} /></a>;
   return (
     <Page title="Mai mult" eyebrow={me.user.name}>
       <div className="stack tight grid2">
+        <L href="#/echipa" t="Echipă" d="Șefii de șantier și proiectele lor" />
         <L href="#/meteo" t="Meteo și lucrări" d="Prognoza pe 7 zile a fiecărui șantier, suprapusă peste grafic" />
         <L href="#/valoare" t="Valoare" d="Ce a adus Autopilotul, în lei, cu formulele la vedere" />
         <L href="#/import" t="Importă proiect" d="Adu bugetul și graficul din Excel; coloanele se potrivesc singure" />
@@ -16,9 +27,18 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
         <L href="#/intreaba" t="Asistent vocal" d="Întrebări și comenzi cu vocea: aprobă, aplică graficul, notează o sarcină" />
         <L href="#/raport" t="Raport de șantier" d="Trimite tu un raport, dacă ai fost pe teren" />
       </div>
-      <Btn kind="ghost" onClick={async () => { await post("/reset"); location.hash = "#/"; location.reload(); }}>Resetează datele demo</Btn>
+      <H>Datele aplicației</H>
+      <Card>
+        <p className="small muted">{me.mode === "own" ? "Lucrezi cu datele tale. Sunt păstrate doar pe acest dispozitiv, deci fă din când în când o copie de siguranță." : "Acum vezi date demonstrative. Când vrei să lucrezi cu proiectele tale, pornește de la zero."}</p>
+        {me.mode !== "own" && <Btn onClick={async () => setOwn(true)}>Începe cu proiectele tale</Btn>}
+        <Btn kind="ghost" onClick={backup}>Salvează o copie de siguranță</Btn>
+        <label className="btn ghost filebtn" htmlFor="rst">Restaurează dintr-o copie<input id="rst" type="file" accept=".db,application/octet-stream" hidden onChange={(e) => restore(e.target.files?.[0])} /></label>
+        <Btn kind="ghost" onClick={async () => { await post("/reset"); location.hash = "#/"; location.reload(); }}>{me.mode === "own" ? "Șterge tot și revino la datele demo" : "Resetează datele demo"}</Btn>
+        {msg && <p className="small muted" role="status">{msg}</p>}
+      </Card>
       <button className="btn ghost" onClick={logout}>Schimbă contul</button>
-      <p className="foot">Datele se păstrează doar pe acest dispozitiv.</p>
+      {own && <Sheet title="Începe cu proiectele tale" fields={[{ key: "name", label: "Numele tău", hint: "Apare în salut, la aprobări și ca semnătură pe documente." }]} initial={{ name: me.user.name }} saveLabel="Șterge datele demo și pornește" note="Toate datele demonstrative se șterg de pe acest dispozitiv. Rămâi cu o aplicație goală, în care adaugi proiectele tale."
+        onClose={() => setOwn(false)} onSave={async (v) => { await post("/workspace/own", v); location.hash = "#/"; location.reload(); }} />}
     </Page>
   );
 }
@@ -53,13 +73,16 @@ export function Sedinte({ me }: { me: any }) {
 
 export function TaskList({ tasks, today, reload }: { tasks: any[]; today: string; reload: () => void }) {
   const toggle = async (t: any) => { await post("/tasks/" + t.id, { done: t.status !== "done" }); reload(); };
-  return (
+  const team = useLoad<any>("/team"), [edit, setEdit] = useState<any>(null);
+  return (<>
+    {edit && <Sheet title="Sarcină" fields={F.task((team.data?.users || []).map((u: any) => u.name), team.data?.sites || [])} initial={{ ...edit, site_id: edit.site_id || "" }} onClose={() => setEdit(null)} onSave={async (v) => { await post("/rows/task/" + edit.id, v); reload(); }} onDelete={async () => { await post(`/rows/task/${edit.id}/delete`); reload(); }} />}
     <ul className="tasks">{tasks.map((t) => (
       <li key={t.id} className={t.status === "done" ? "done" : ""}>
         <label><input type="checkbox" checked={t.status === "done"} onChange={() => toggle(t)} /><span><strong>{t.title}</strong>
-          <span className={"small " + (t.status !== "done" && t.due < today ? "t-crit" : "muted")}>{t.owner} · {t.status !== "done" && t.due < today ? "întârziată, termen " : "termen "}{dayShort(t.due)}{t.site ? " · " + t.site : ""} {/^(report|delivery)/.test(t.source || "") && <Auto>deschisă automat</Auto>}</span></span></label>
+          <span className={"small " + (t.status !== "done" && t.due < today ? "t-crit" : "muted")}>{t.owner} · {t.status !== "done" && t.due < today ? "întârziată, termen " : "termen "}{dayShort(t.due)}{t.site ? " · " + t.site : ""} {/^(report|delivery|meteo)/.test(t.source || "") && <Auto>deschisă automat</Auto>}</span></span></label>
+        <button className="iconbtn bare" onClick={() => setEdit(t)} aria-label={"Editează: " + t.title}><Icon d={I.edit} size={18} /></button>
       </li>))}</ul>
-  );
+  </>);
 }
 
 export function Sarcini({ me }: { me: any }) {
@@ -187,6 +210,7 @@ export function RaportNou({ me, back, onSent }: { me: any; back?: string; onSent
 export function SefHome({ me, route, logout }: { me: any; route: string[]; logout: () => void }) {
   const my = useLoad<any>("/my");
   const tab = route[0] === "sarcini" ? "sarcini" : route[0] === "mesaje" ? "mesaje" : "raport";
+  const [req, setReq] = useState(false), [sent, setSent] = useState("");
   const T = ({ id, href, icon, label }: any) => <a href={href} aria-current={tab === id ? "page" : undefined}><span className="ti"><Icon d={icon} /></span>{label}</a>;
   return (
     <>
@@ -194,6 +218,8 @@ export function SefHome({ me, route, logout }: { me: any; route: string[]; logou
         <div className="whoami"><div><strong>{me.user.name}</strong><span className="small muted">Șef de șantier{me.sites[0] ? " · " + me.sites[0].name : ""}</span></div><button className="btn ghost sm" onClick={logout}>Schimbă contul</button></div>
         {tab === "raport" && <>
           <RaportNou me={me} onSent={my.reload} />
+          {me.sites[0] && <div className="content" style={{ paddingTop: 0, paddingBottom: 0 }}><button className="btn ghost" onClick={() => setReq(true)}>Cere o aprobare</button>{sent && <p className="small muted" role="status">{sent}</p>}</div>}
+          {req && <Sheet title="Cerere de aprobare" fields={F.approval([]).filter((x) => x.key !== "site_id")} initial={{ type: "comanda" }} saveLabel="Trimite cererea" onClose={() => setReq(false)} onSave={async (v) => { await post(`/sites/${me.sites[0].id}/approvals`, v); setSent("Cererea a ajuns la directorul zonal."); }} />}
           <div className="content"><H>Rapoartele mele</H>{my.data?.reports.length ? <ul className="plain">{my.data.reports.map((r: any) => <li key={r.id}><div className="row between"><Pill s={r.status} /><span className="small muted">{when(r.ts)}</span></div><span>{r.summary}</span></li>)}</ul> : <Empty>Niciun raport trimis.</Empty>}</div>
         </>}
         {tab === "sarcini" && <Page title="Sarcinile șantierului">{my.data?.tasks.length ? <ul className="tasks">{my.data.tasks.map((t: any) => <li key={t.id}><label><input type="checkbox" onChange={async () => { await post("/tasks/" + t.id, { done: true }); my.reload(); }} /><span><strong>{t.title}</strong><span className="small muted">{t.owner} · termen {dayShort(t.due)}</span></span></label></li>)}</ul> : <Empty>Nicio sarcină deschisă.</Empty>}</Page>}

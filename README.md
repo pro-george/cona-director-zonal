@@ -34,11 +34,17 @@ După orice modificare: `npm run build`, commit, push.
 
 Automatizările și orarul lor sunt definite în `web/src/core/automations.js`.
 
+## Lucrul cu date proprii
+
+- **Adăugare și modificare peste tot.** Butonul „Adaugă” (proiect, proiect din Excel, raport, sarcină, cerere de aprobare, ședință, om în echipă) e pe orice ecran. În fișa unui proiect se editează proiectul, liniile de buget, situațiile de lucrări, zonele și stadiul lor, livrările, utilajele și sarcinile; orice rând se atinge ca să fie modificat sau șters.
+- **Date proprii în loc de demo.** Din „Mai mult → Datele aplicației → Începe cu proiectele tale”: datele demonstrative se șterg și aplicația rămâne goală, pe numele tău. Din acel moment actualizările aplicației nu mai ating datele.
+- **Copie de siguranță.** Același ecran descarcă întreaga bază de date ca fișier `.db` și o restaurează. Așa se mută datele și pe alt dispozitiv.
+
 ## Limitele variantei fără server
 
 | Subiect | Cum stau lucrurile |
 |---|---|
-| Date | Rămân pe dispozitivul pe care e deschisă aplicația. Două telefoane nu văd aceleași date. |
+| Date | Rămân pe dispozitivul pe care e deschisă aplicația. Două telefoane nu văd aceleași date; se pot muta doar cu o copie de siguranță. Ștergerea datelor browserului le pierde. |
 | Conturi | Se alege un cont de pe ecranul de intrare; nu există parole. Oricine are linkul poate intra. |
 | Automatizări | Rulează cât timp aplicația e deschisă și recuperează la următoarea deschidere. |
 | AI | „Mod demo” (texte compuse din reguli) până când cineva pune o cheie Anthropic în ecranul Autopilot. Cheia rămâne în browserul acelui dispozitiv. |

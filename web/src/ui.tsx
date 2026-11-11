@@ -18,6 +18,8 @@ export const I = {
   plus: "M12 5v14M5 12h14",
   send: "M4 12l16-8-6 16-3-7z",
   play: "M7 5l12 7-12 7z",
+  close: "M6 6l12 12M18 6 6 18",
+  edit: "M4 20h4L19 9l-4-4L4 16zM14 6l4 4",
   stop: "M7 7h10v10H7z",
 };
 

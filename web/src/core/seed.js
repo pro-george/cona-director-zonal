@@ -2,17 +2,27 @@
 // ca demo-ul să arate "viu" oricând e pornit. „Resetează datele demo” din aplicație șterge tot și repopulează.
 import { exec, run, one, dayOf, addDays } from "./db.js";
 
-// Crește numărul când se schimbă datele demonstrative: dispozitivele care au o versiune veche o primesc pe cea nouă.
+// Datele demo se reîmprospătează singure când se schimbă versiunea lor. Odată ce omul a trecut pe datele lui
+// (mode = "own"), aplicația nu mai șterge și nu mai rescrie nimic la actualizări.
 const SEED_VERSION = 5;
+const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
+const get = (key) => { const r = one("SELECT value FROM settings WHERE key=?", key); return r ? r.value : null; };
+export const mode = () => (get("mode") === '"own"' ? "own" : "demo");
 export function seedIfEmpty() {
-  const v = one("SELECT value FROM settings WHERE key='seed_version'");
-  if (one("SELECT COUNT(*) n FROM users").n === 0 || !v || Number(v.value) !== SEED_VERSION) seed();
+  if (one("SELECT COUNT(*) n FROM users").n === 0) return seed();
+  if (mode() === "demo" && Number(get("seed_version")) !== SEED_VERSION) seed();
+}
+// Pornire cu date proprii: golește tot ce era demo și lasă doar contul directorului, cu numele dat.
+export function startOwn(name) {
+  for (const t of TABLES) exec(`DELETE FROM ${t}`);
+  run("INSERT INTO users(name,email,role,pass,site_id) VALUES(?,?,?,?,?)", String(name || "").trim().slice(0, 60) || "Director zonal", "director@local", "director", "", null);
+  run("INSERT INTO settings(key,value) VALUES('mode','\"own\"')"); run("INSERT INTO settings(key,value) VALUES('autoapprove_limit','3000')"); run("INSERT INTO settings(key,value) VALUES('seed_version',?)", String(SEED_VERSION));
 }
 
 export function seed() {
   const T = dayOf(), d = (n) => addDays(T, n);
   const at = (n, h, m) => new Date(`${d(n)}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00+02:00`).getTime();
-  for (const t of ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"]) exec(`DELETE FROM ${t}`);
+  for (const t of TABLES) exec(`DELETE FROM ${t}`);
 
   const user = (name, email, role, site) => Number(run("INSERT INTO users(name,email,role,pass,site_id) VALUES(?,?,?,?,?)", name, email, role, "", site).lastInsertRowid);
   user("Cristian", "director@demo.local", "director", null);

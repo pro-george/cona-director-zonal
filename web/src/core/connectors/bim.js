@@ -13,7 +13,8 @@ export function physical(siteId, today) {
   const due = els.filter((e) => e.planned <= today).length;
   const zonesMap = new Map();
   for (const e of els) {
-    const z = zonesMap.get(e.zone) || { zone: e.zone, total: 0, mounted: 0, due: 0, delivered: 0 };
+    const z = zonesMap.get(e.zone) || { zone: e.zone, kind: e.kind, total: 0, mounted: 0, due: 0, delivered: 0, start: null, end: null };
+    if (e.status !== "montat") { if (!z.start || e.planned < z.start) z.start = e.planned; if (!z.end || e.planned > z.end) z.end = e.planned; }
     z.total++; if (e.status === "montat") z.mounted++; if (e.planned <= today) z.due++;
     if (e.status === "livrat" || e.status === "montat") z.delivered++;
     zonesMap.set(e.zone, z);

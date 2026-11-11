@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, post, useLoad, lei, mil, pct, dayLong, dayShort, time, mins, when, speak, stopSpeaking, canSpeak } from "./api";
 import { Page, Card, H, Pill, Src, Auto, Bar, Btn, Err, Loading, Empty, Icon, I, STATUS } from "./ui";
 import { Brand } from "./App";
+import { Sheet, F } from "./Edit";
 
 const order: any = { critic: 0, atentie: 1, ok: 2, none: 3 };
 
@@ -53,8 +54,13 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
         <div className="hero-brand"><Brand /><span>Director zonal</span><button className="link switch-acc" onClick={logout}>Schimbă contul</button></div>
         <p className="eyebrow">{dayLong(data.today)}</p>
         <h1>{hello}, {me.user.name.split(" ")[0]}</h1>
-        <p className="state">{data.sites.length} șantiere: {state}</p>
+        <p className="state">{data.sites.length} {data.sites.length === 1 ? "proiect" : "proiecte"}: {state}</p>
       </header>
+      {data.sites.length === 0 ? <div className="content"><Card className="brief">
+        <p className="headline">Începe cu primul proiect</p>
+        <p className="muted">Adaugă-l de mână sau adu bugetul și graficul din Excel. Restul (meteo, alerte, replanificări, briefing) pornește singur din datele lui.</p>
+        <div className="row two"><a className="btn ghost" href="#/import" style={{ textAlign: "center" }}>Din Excel</a><button className="btn" onClick={() => (document.querySelector(".fab") as HTMLElement)?.click()}>Proiect nou</button></div>
+      </Card></div> :
       <div className="content azi">
         <div className="col-main">
         <Card className="brief">
@@ -71,7 +77,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
           </> : <><Empty>Briefingul de azi nu a fost scris încă.</Empty><Btn onClick={async () => { await post("/brief"); await reload(); }}>Scrie briefingul</Btn></>}
         </Card>
 
-        <H right={<a className="link" href="#/santiere">Detalii</a>}>Șantiere</H>
+        <H right={<a className="link" href="#/santiere">Detalii</a>}>Proiecte</H>
         <div className="stack tight">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} compact />)}</div>
 
         </div>
@@ -95,8 +101,8 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
           {q.trim() ? <button className="iconbtn solid" aria-label="Trimite"><Icon d={I.send} size={18} /></button> : <a className="iconbtn solid" href="#/intreaba" aria-label="Deschide asistentul vocal"><Icon d={I.mic} size={18} /></a>}
         </form>
         </div>
-        <p className="foot">Date demonstrative. ERP și BIM simulate.</p>
-      </div>
+        {me.mode !== "own" && <p className="foot">Date demonstrative. ERP și BIM simulate.</p>}
+      </div>}
     </div>
   );
 }
@@ -120,7 +126,7 @@ export function Alerte() {
 export function Santiere() {
   const { data, err } = useLoad<any>("/home");
   return (
-    <Page title="Șantiere" eyebrow="Zona ta" right={<a className="btn ghost sm" href="#/import">Importă</a>}>
+    <Page title="Proiecte" eyebrow="Zona ta" right={<a className="btn ghost sm" href="#/import">Din Excel</a>}>
       <Err msg={err} />
       {!data ? <Loading /> : <div className="stack grid2">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} />)}</div>}
     </Page>
@@ -128,17 +134,24 @@ export function Santiere() {
 }
 
 export function Santier({ id }: { id: string }) {
-  const { data, err } = useLoad<any>("/sites/" + id);
-  const [tab, setTab] = useState("rezumat");
+  const { data, err, reload } = useLoad<any>("/sites/" + id);
+  const [tab, setTab] = useState("rezumat"), [sheet, setSheet] = useState<any>(null);
+  // Deschide un formular pentru un rând (buget, încasare, livrare, utilaj, sarcină): adăugare dacă nu are id, altfel modificare.
+  const row = (entity: string, title: string, fields: any, item?: any, initial: any = {}) => setSheet({ title, fields, initial: item || initial,
+    onSave: async (v: any) => { await post(item ? `/rows/${entity}/${item.id}` : `/sites/${id}/rows/${entity}`, v); await reload(); },
+    onDelete: item ? async () => { await post(`/rows/${entity}/${item.id}/delete`); await reload(); } : undefined });
   if (!data) return <Page title="Șantier" back="#/santiere">{err ? <Err msg={err} /> : <Loading />}</Page>;
-  const { site, finance: f, physical: p, deliveries, reports, tasks, alerts, weather: w, replan } = data;
+  const { site, finance: f, physical: p, deliveries, reports, tasks, alerts, weather: w, replan, equipment, team } = data;
+  const people = ["Cristian", ...team.map((u: any) => u.name)].filter((n, i, a) => a.indexOf(n) === i), zonesList = p.zones.map((z: any) => z.zone), today = new Date().toISOString().slice(0, 10);
+  const editProject = () => setSheet({ title: "Editează proiectul", fields: F.project(team), initial: { ...site, manager_id: site.manager_id || "" }, onSave: async (v: any) => { await post("/projects/" + id, v); await reload(); }, onDelete: async () => { await post(`/projects/${id}/delete`); location.hash = "#/santiere"; } });
+  const Add = ({ children, on }: any) => <button className="addrow" onClick={on}><Icon d={I.plus} size={16} />{children}</button>;
   const riskBy: any = {}; w.risks.forEach((r: any) => { (riskBy[r.day] = riskBy[r.day] || []).push(r); });
   const wd = (d: string) => new Intl.DateTimeFormat("ro-RO", { timeZone: "UTC", weekday: "short" }).format(new Date(d + "T12:00:00Z"));
   const last = reports[0];
   const DELIV: any = { livrat: "Livrat", planificat: "Planificat", intarziat: "Întârziat", in_drum: "În drum" };
   const ZS: any = { gata: "Gata", in_lucru: "În lucru", intarziat: "În urmă", planificat: "Planificat" };
   return (
-    <Page title={site.name} eyebrow={site.location + " · " + site.client} back="#/santiere" narrow>
+    <Page title={site.name} eyebrow={[site.location, site.client].filter(Boolean).join(" · ") || "Proiect"} back="#/santiere" narrow right={<button className="btn ghost sm" onClick={editProject}>Editează</button>}>
       <div className="segctl" role="tablist">{[["rezumat", "Rezumat"], ["bani", "Bani"], ["stadiu", "Stadiu"], ["meteo", "Meteo"], ["rapoarte", "Rapoarte"]].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}</div>
 
       {tab === "rezumat" && <>
@@ -150,7 +163,12 @@ export function Santier({ id }: { id: string }) {
         <H>Alerte</H>
         {alerts.length ? <ul className="alerts">{alerts.map((a: any, i: number) => <li key={i} className={"alert sev-" + a.sev}><div><Src>{a.source}</Src></div><p>{a.text}</p></li>)}</ul> : <Empty>Nicio alertă pe acest șantier.</Empty>}
         <H>Sarcini deschise</H>
-        {tasks.length ? <ul className="plain">{tasks.map((t: any) => <li key={t.id}><strong>{t.title}</strong><span className="muted small">{t.owner} · termen {dayShort(t.due)}</span></li>)}</ul> : <Empty>Nicio sarcină deschisă.</Empty>}
+        {tasks.length ? <ul className="plain">{tasks.map((t: any) => <li key={t.id} className="tap" onClick={() => row("task", "Sarcină", F.task(people, [{ id: site.id, name: site.name }]), t)}><strong>{t.title}</strong><span className="muted small">{t.owner} · termen {dayShort(t.due)}</span></li>)}</ul> : <Empty>Nicio sarcină deschisă.</Empty>}
+        <Add on={() => row("task", "Sarcină nouă", F.task(people, [{ id: site.id, name: site.name }]), undefined, { owner: site.manager || "Cristian", site_id: site.id })}>Sarcină</Add>
+        <H>Utilaje închiriate</H>
+        {equipment.length ? <ul className="plain">{equipment.map((e: any) => <li key={e.id} className="tap" onClick={() => row("equipment", "Utilaj", F.equipment, e)}><div className="row between"><strong>{e.name}</strong><span className={"pill " + (e.status === "in_asteptare" ? "s-critic" : "s-ok")}>{e.status === "in_asteptare" ? "În așteptare" : "Lucrează"}</span></div><span className="small muted">{lei(e.daily_cost)} pe zi</span></li>)}</ul> : <Empty>Niciun utilaj trecut.</Empty>}
+        <Add on={() => row("equipment", "Utilaj nou", F.equipment, undefined, { status: "activ" })}>Utilaj</Add>
+        <a className="btn ghost" href="#/raport" style={{ textAlign: "center" }}>Trimite un raport de șantier</a>
       </>}
 
       {tab === "bani" && <>
@@ -162,14 +180,18 @@ export function Santier({ id }: { id: string }) {
         </Card>
         <H>Pe categorii</H>
         <div className="stack tight">{f.lines.map((l: any) => (
-          <Card key={l.category} className={l.over ? "over" : ""}>
+          <Card key={l.id} className={(l.over ? "over " : "") + "tap"} onClick={() => row("budget", "Linie de buget", F.budget, l)}>
             <div className="row between"><strong>{l.category}</strong>{l.over && <span className="pill s-critic">Depășit</span>}</div>
             <div className="bar2 stacked"><i className="fill t-brand" style={{ width: Math.min(100, (l.actual / l.budget) * 100) + "%" }} /><i className="fill t-commit" style={{ width: Math.min(100 - Math.min(100, (l.actual / l.budget) * 100), (l.committed / l.budget) * 100) + "%" }} /></div>
             <p className="small muted">Cheltuit {lei(l.actual)} · angajat {lei(l.committed)} · buget {lei(l.budget)}</p>
             <p className={"small " + (l.remaining < 0 ? "t-crit" : "")}>{l.remaining < 0 ? "Depășire: " + lei(-l.remaining) : "Rămas: " + lei(l.remaining)}</p>
           </Card>))}</div>
+        {f.lines.length === 0 && <Empty>Bugetul nu are încă nicio linie.</Empty>}
+        <Add on={() => row("budget", "Linie de buget nouă", F.budget)}>Linie de buget</Add>
         <H>Încasări de la beneficiar</H>
-        <ul className="plain">{f.receivables.map((r: any) => <li key={r.id}><div className="row between"><strong>{r.title}</strong><b>{lei(r.amount)}</b></div><span className={"small " + (r.overdueDays ? "t-crit" : "muted")}>{r.paid_at ? "Încasată pe " + dayShort(r.paid_at) : r.overdueDays ? `Restantă de ${r.overdueDays} zile (scadență ${dayShort(r.due)})` : "Scadentă pe " + dayShort(r.due)}</span></li>)}</ul>
+        <ul className="plain">{f.receivables.map((r: any) => <li key={r.id} className="tap" onClick={() => row("receivable", "Situație de lucrări", F.receivable, r)}><div className="row between"><strong>{r.title}</strong><b>{lei(r.amount)}</b></div><span className={"small " + (r.overdueDays ? "t-crit" : "muted")}>{r.paid_at ? "Încasată pe " + dayShort(r.paid_at) : r.overdueDays ? `Restantă de ${r.overdueDays} zile (scadență ${dayShort(r.due)})` : "Scadentă pe " + dayShort(r.due)}</span>
+          {!r.paid_at && <button className="link" onClick={async (e) => { e.stopPropagation(); await post(`/rows/receivable/${r.id}`, { paid_at: today }); await reload(); }}>Marchează încasată azi</button>}</li>)}</ul>
+        <Add on={() => row("receivable", "Situație de lucrări nouă", F.receivable, undefined, { issued: today })}>Situație de lucrări</Add>
       </>}
 
       {replan && (tab === "stadiu" || tab === "meteo" || tab === "rezumat") && <a className="navrow hl" href="#/replanificari"><div><strong>Grafic nou propus de Autopilot</strong><span className="small">{replan.data.impact.elements} elemente de redatat. Deschide ca să aprobi sau să respingi.</span></div><Icon d={I.chev} size={18} /></a>}
@@ -181,9 +203,13 @@ export function Santier({ id }: { id: string }) {
           {p.replanned > 0 && <p className="small muted">Grafic replanificat: {p.replanned} elemente mutate, cu cel mult {p.slip} zile față de graficul inițial.</p>}
         </Card>
         <H>Pe zone</H>
-        <div className="zones">{p.zones.map((z: any) => <div key={z.zone} className={"zone z-" + z.state}><strong>{z.zone}</strong><b>{z.mounted}/{z.total}</b><span>{ZS[z.state]}{z.state === "intarziat" ? ` · ${z.due - z.mounted} în urmă` : ""}</span></div>)}</div>
+        <div className="zones">{p.zones.map((z: any) => <div key={z.zone} role="button" tabIndex={0} className={"zone tap z-" + z.state} onClick={() => setSheet({ title: "Zonă: " + z.zone, fields: F.zoneEdit(z.total), initial: { zone: z.zone, mounted: z.mounted, start: z.start || "", end: z.end || "" }, note: "Actualizează câte elemente sunt montate sau mută restul lucrărilor.",
+          onSave: async (v: any) => { await post(`/sites/${id}/zones`, { ...v, old: z.zone }); await reload(); }, onDelete: async () => { await post(`/sites/${id}/zones/delete`, { zone: z.zone }); await reload(); } })}><strong>{z.zone}</strong><b>{z.mounted}/{z.total}</b><span>{ZS[z.state]}{z.state === "intarziat" ? ` · ${z.due - z.mounted} în urmă` : ""}</span></div>)}</div>
+        {p.zones.length === 0 && <Empty>Proiectul nu are încă zone. Adaugă prima lucrare.</Empty>}
+        <Add on={() => setSheet({ title: "Zonă nouă", fields: F.zoneNew, initial: { count: 20, start: today, mounted: 0 }, onSave: async (v: any) => { await post(`/sites/${id}/zones`, v); await reload(); } })}>Zonă sau lucrare</Add>
         <H>Livrări din fabrică</H>
-        {deliveries.length ? <ul className="plain">{deliveries.map((d: any) => <li key={d.id}><div className="row between"><strong>{d.count} × {d.kind}</strong><span className={"pill " + (d.late ? "s-critic" : d.status === "livrat" ? "s-ok" : "s-none")}>{DELIV[d.status] || d.status}</span></div><span className="small muted">{d.zone} · planificat {dayShort(d.planned)}{d.late && d.eta ? " · estimat " + dayShort(d.eta) : ""}{d.note ? " · " + d.note : ""}</span></li>)}</ul> : <Empty>Nicio livrare în perioada apropiată.</Empty>}
+        {deliveries.length ? <ul className="plain">{deliveries.map((d: any) => <li key={d.id} className="tap" onClick={() => row("delivery", "Livrare", F.delivery(zonesList), d)}><div className="row between"><strong>{d.count} × {d.kind}</strong><span className={"pill " + (d.late ? "s-critic" : d.status === "livrat" ? "s-ok" : "s-none")}>{DELIV[d.status] || d.status}</span></div><span className="small muted">{d.zone} · planificat {dayShort(d.planned)}{d.late && d.eta ? " · estimat " + dayShort(d.eta) : ""}{d.note ? " · " + d.note : ""}</span></li>)}</ul> : <Empty>Nicio livrare în perioada apropiată.</Empty>}
+        <Add on={() => row("delivery", "Livrare nouă", F.delivery(zonesList), undefined, { planned: today, status: "planificat" })}>Livrare</Add>
       </>}
 
       {tab === "meteo" && <>
@@ -205,8 +231,10 @@ export function Santier({ id }: { id: string }) {
             {[["Blocaje", r.details.blockers], ["Necesar", r.details.needs], ["Executat", r.details.done], ["Utilaje", r.details.equipment], ["Din poze", r.details.photoNotes]].map(([t, v]: any) => v?.length > 0 && <div key={t}><span className="label">{t}</span><ul>{v.map((x: string, i: number) => <li key={i}>{x}</li>)}</ul></div>)}
             {r.photos?.length > 0 && <div className="thumbs">{r.photos.map((src: string) => <img key={src} src={src} alt="Poză din raport" />)}</div>}
             <span className="label">Text original</span><p className="raw">{r.raw}</p>
+            <button className="link danger" onClick={async () => { await post(`/reports/${r.id}/delete`); await reload(); }}>Șterge raportul</button>
           </details>
         </Card>))}</div> : <Empty>Niciun raport pentru acest șantier.</Empty>)}
+      {sheet && <Sheet {...sheet} onClose={() => setSheet(null)} />}
     </Page>
   );
 }

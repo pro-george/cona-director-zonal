@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { post, useLoad, lei, when, mins, dayShort } from "./api";
 import { Page, Card, H, Src, Auto, Btn, Err, Loading, Empty, copy } from "./ui";
+import { Sheet, F } from "./Edit";
 
 const TYPE: any = { comanda: "Comandă", situatie_sub: "Situație subcontractor", pontaj: "Pontaj", decont: "Decont" };
 
 export function Aprobari() {
   const { data, err, reload } = useLoad<any>("/approvals");
-  const [msg, setMsg] = useState("");
+  const [msg, setMsg] = useState(""), [edit, setEdit] = useState<any>(null);
   if (!data) return <Page title="Aprobări">{err ? <Err msg={err} /> : <Loading />}</Page>;
   const pending = data.items.filter((a: any) => a.status === "pending"), done = data.items.filter((a: any) => a.status !== "pending");
   const decide = async (id: number, decision: string) => { try { await post("/approvals/" + id, { decision }); setMsg(""); await reload(); } catch (e: any) { setMsg(e.message); } };
@@ -14,7 +15,7 @@ export function Aprobari() {
     <Page title="Aprobări" eyebrow={pending.length + " te așteaptă"} right={<Src>{data.source}</Src>}>
       <a className="autostrip inset" href="#/autopilot"><span>Cererile sub <b>{lei(data.limit)}</b> care se încadrează în buget se aprobă singure. Restul vin aici, deja verificate.</span></a>
       <Err msg={msg} />
-      {pending.length === 0 && <Empty>Nicio cerere în așteptare.</Empty>}
+      {pending.length === 0 && <Empty>Nicio cerere în așteptare. Poți adăuga una din butonul „Adaugă”.</Empty>}
       <div className="stack grid2">{pending.map((a: any) => (
         <Card key={a.id}>
           <div className="row between"><span className="label">{TYPE[a.type] || a.type}</span><span className="muted small">{a.site}</span></div>
@@ -22,7 +23,9 @@ export function Aprobari() {
           <div className="row between"><span className="muted small">{a.supplier} · cerut de {a.requested_by}</span><b className="amount">{lei(a.amount)}</b></div>
           {a.rec && <div className={"rec rec-" + a.rec}><div className="row between"><strong>{a.rec === "aproba" ? "Recomandare: aprobă" : "Recomandare: verifică înainte"}</strong><Auto>verificat</Auto></div><p>{a.rec_reason}</p></div>}
           <div className="row two"><Btn kind="ghost" onClick={() => decide(a.id, "reject")}>Respinge</Btn><Btn onClick={() => decide(a.id, "approve")}>Aprobă</Btn></div>
+          <button className="link" onClick={() => setEdit(a)}>Modifică cererea</button>
         </Card>))}</div>
+      {edit && <Sheet title="Modifică cererea" fields={F.approval([]).filter((x) => x.key !== "site_id")} initial={edit} onClose={() => setEdit(null)} onSave={async (v) => { await post(`/approvals/${edit.id}/edit`, v); await reload(); }} onDelete={async () => { await post(`/approvals/${edit.id}/delete`); await reload(); }} />}
       <H>Rezolvate recent</H>
       <ul className="plain">{done.map((a: any) => (
         <li key={a.id}><div className="row between"><strong>{a.title}</strong><b>{lei(a.amount)}</b></div>

@@ -68,6 +68,7 @@ export async function makeBrief(ctx) {
     `Scrie briefingul de dimineață pentru ${roDay(ctx.zi)}, din datele de mai jos (rapoarte de șantier, ERP, BIM, prognoză meteo suprapusă peste lucrările planificate).\n${JSON.stringify(ctx)}\n\n` +
     `JSON: {"headline":"cel mai important lucru al zilei, max 14 cuvinte","summary":"2-3 fraze despre starea zonei","sites":[{"id":"...","line":"o frază"}],"decisions":["acțiune pe care trebuie să o ia directorul azi, cu șantierul numit"],"risks":["risc de termen, cost sau încasare"]}`, { max: 1100 });
   if (j && j.headline) return { headline: String(j.headline), summary: String(j.summary || ""), sites: Array.isArray(j.sites) ? j.sites.filter((x) => x && x.id).map((x) => ({ id: x.id, line: String(x.line || "") })) : [], decisions: strs(j.decisions), risks: strs(j.risks), by: "model" };
+  if (!ctx.santiere.length) return { headline: "Niciun proiect încă", summary: "Adaugă primul proiect, de mână sau din Excel, și briefingul se scrie singur din datele lui.", sites: [], decisions: [], risks: [], by: "demo" };
   const crit = ctx.santiere.filter((s) => s.raport?.status === "critic"), warn = ctx.santiere.filter((s) => s.raport?.status === "atentie"), ok = ctx.santiere.filter((s) => s.raport?.status === "ok");
   const decisions = [];
   for (const s of ctx.santiere) {

@@ -1,17 +1,18 @@
 // "Serverul" aplicației, rulat în browser. Aceleași rute pe care le-ar expune un API real,
 // ca interfața să nu se schimbe în ziua în care aplicația primește un server adevărat.
-import { openDb, q, one, run, J, dayOf, addDays, setting, setSetting } from "./db.js";
+import { openDb, flush, q, one, run, J, dayOf, addDays, setting, setSetting } from "./db.js";
 import * as erp from "./connectors/erp.js";
 import * as bim from "./connectors/bim.js";
 import * as wx from "./connectors/weather.js";
 import { sitesAll, siteById, latestReports, alerts, zoneContext, reportRow } from "./data.js";
 import * as ai from "./ai.js";
 import * as auto from "./automations.js";
-import { seed, seedIfEmpty } from "./seed.js";
+import { seed, seedIfEmpty, startOwn, mode } from "./seed.js";
 import * as replan from "./replan.js";
 import { kindOf } from "./importer.js";
 import * as value from "./value.js";
 import * as commands from "./commands.js";
+import * as crud from "./crud.js";
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -22,7 +23,9 @@ export function boot() {
     await openDb(); seedIfEmpty(); await auto.bootstrap();
     const tick = () => auto.tick().catch((e) => console.error("[autopilot]", e));
     tick(); setInterval(tick, 60000);
-    document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+    // La trecerea în fundal sau la închidere, tot ce nu a apucat să fie scris pe dispozitiv se scrie acum.
+    document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); else tick(); });
+    window.addEventListener("pagehide", () => { flush(); });
   })();
   return ready;
 }
@@ -39,11 +42,17 @@ async function shrink(file) {
 }
 
 const ROUTES = [
-  ["GET", "users", { open: true }, () => ({ users: q("SELECT u.id,u.name,u.role,s.name AS site FROM users u LEFT JOIN sites s ON s.id=u.site_id ORDER BY u.id") })],
+  ["GET", "users", { open: true }, () => ({ mode: mode(), users: q("SELECT u.id,u.name,u.role,s.name AS site FROM users u LEFT JOIN sites s ON s.id=u.site_id ORDER BY u.id") })],
   ["POST", "login", { open: true }, ({ body }) => { const u = one("SELECT id FROM users WHERE id=?", Number(body.user_id)); if (!u) fail(401, "Contul nu există."); try { localStorage.setItem(UID, String(u.id)); } catch { fail(500, "Browserul nu permite salvarea sesiunii."); } return { ok: true }; }],
   ["POST", "logout", { open: true }, () => { try { localStorage.removeItem(UID); } catch { /* ignorat */ } return { ok: true }; }],
-  ["POST", "reset", {}, async () => { seed(); await auto.bootstrap(); return { ok: true }; }],
-  ["GET", "me", {}, ({ user }) => ({ user, ai: ai.aiMode(), today: dayOf(), sites: sitesAll().filter((s) => user.role === "director" || s.id === user.site_id).map((s) => ({ id: s.id, name: s.name, location: s.location })) })],
+  ["POST", "reset", { director: true }, async () => { seed(); await auto.bootstrap(); try { localStorage.setItem(UID, String(one("SELECT id FROM users WHERE role='director'").id)); } catch { /* ignorat */ } await flush(); return { ok: true }; }],
+  ["POST", "workspace/own", { director: true }, async ({ body }) => { startOwn(body.name); auto.ensure(); try { localStorage.setItem(UID, String(one("SELECT id FROM users WHERE role='director'").id)); } catch { /* ignorat */ } await flush(); return { ok: true }; }],
+  ["POST", "team/:id", { director: true }, ({ params, body }) => { crud.updateUser(params.id, body); return { ok: true }; }],
+  ["POST", "approvals/:id/edit", { director: true }, async ({ params, body }) => { crud.updateApproval(params.id, body); await auto.runNow("precheck"); return { ok: true }; }],
+  ["POST", "approvals/:id/delete", { director: true }, ({ params }) => { crud.removeApproval(params.id); return { ok: true }; }],
+  ["POST", "reports/:id/delete", { director: true }, ({ params }) => { crud.removeReport(params.id); return { ok: true }; }],
+  ["POST", "meetings/:id/delete", { director: true }, ({ params }) => { crud.removeMeeting(params.id); return { ok: true }; }],
+  ["GET", "me", {}, ({ user }) => ({ user, mode: mode(), ai: ai.aiMode(), today: dayOf(), sites: sitesAll().filter((s) => user.role === "director" || s.id === user.site_id).map((s) => ({ id: s.id, name: s.name, location: s.location })) })],
 
   ["GET", "home", { director: true }, () => {
     const today = dayOf(), reports = latestReports(today), b = one("SELECT * FROM briefs WHERE day=?", today);
@@ -63,7 +72,8 @@ const ROUTES = [
       weather: { ...wx.forecast(s.id), risks: wx.risks(s.id, today), riskDays: wx.riskDays(s.id, today) },
       reports: q("SELECT * FROM reports WHERE site_id=? ORDER BY ts DESC LIMIT 10", s.id).map(reportRow),
       tasks: q("SELECT * FROM tasks WHERE site_id=? AND status='open' ORDER BY due", s.id), alerts: alerts(today).filter((a) => a.site_id === s.id),
-      replan: replan.list().find((r) => r.site_id === s.id && r.status === "proposed") || null };
+      replan: replan.list().find((r) => r.site_id === s.id && r.status === "proposed") || null,
+      equipment: q("SELECT * FROM erp_equipment WHERE site_id=? ORDER BY id", s.id), team: q("SELECT id, name FROM users WHERE role='sef' ORDER BY name") };
   }],
 
   ["POST", "projects/import", { director: true }, async ({ body }) => {
@@ -97,6 +107,21 @@ const ROUTES = [
     await auto.runNow("weather"); await auto.runNow("replan");
     return { id, name, budget: budget.length, schedule: schedule.length, elements, located: lat != null };
   }],
+
+  /* ----- date ținute la zi de om: proiecte, rânduri din ERP/BIM, echipă ----- */
+  ["POST", "projects", { director: true }, async ({ body }) => { const r = await crud.createProject(body); await auto.runNow("weather"); return r; }],
+  ["POST", "projects/:id", { director: true }, async ({ params, body }) => { const r = await crud.updateProject(params.id, body); if (r.relocated) { await auto.runNow("weather"); replan.generate(); } return { ok: true }; }],
+  ["POST", "projects/:id/delete", { director: true }, ({ params }) => { crud.deleteProject(params.id); return { ok: true }; }],
+  ["POST", "sites/:id/zones", { director: true }, ({ params, body }) => { body.old ? crud.updateZone(params.id, String(body.old), body) : crud.createZone(params.id, body); replan.generate(); return { ok: true }; }],
+  ["POST", "sites/:id/zones/delete", { director: true }, ({ params, body }) => { crud.deleteZone(params.id, String(body.zone)); replan.generate(); return { ok: true }; }],
+  ["POST", "sites/:id/approvals", {}, async ({ user, params, body }) => { if (user.role !== "director" && user.site_id !== params.id) fail(403, "Poți cere aprobări doar pentru șantierul tău."); const id = crud.createApproval(params.id, body, user); await auto.runNow("precheck"); return { id }; }],
+  ["POST", "sites/:id/rows/:entity", { director: true }, ({ params, body }) => { const id = crud.create(params.entity, params.id, body); replan.generate(); return { id }; }],
+  ["POST", "rows/:entity", { director: true }, ({ params, body }) => ({ id: crud.create(params.entity, body.site_id || null, body) })],
+  ["POST", "rows/:entity/:id", { director: true }, ({ params, body }) => { crud.update(params.entity, params.id, body); replan.generate(); return { ok: true }; }],
+  ["POST", "rows/:entity/:id/delete", { director: true }, ({ params }) => { crud.remove(params.entity, params.id); replan.generate(); return { ok: true }; }],
+  ["GET", "team", { director: true }, () => ({ users: q("SELECT u.id,u.name,u.role,u.site_id,s.name AS site FROM users u LEFT JOIN sites s ON s.id=u.site_id ORDER BY u.id"), sites: sitesAll().map((s) => ({ id: s.id, name: s.name })) })],
+  ["POST", "team", { director: true }, ({ body }) => ({ id: crud.createUser(body) })],
+  ["POST", "team/:id/delete", { director: true }, ({ params }) => { crud.removeUser(params.id); return { ok: true }; }],
 
   ["GET", "weather", { director: true }, () => {
     const today = dayOf(), open = replan.list().filter((r) => r.status === "proposed");
@@ -189,7 +214,8 @@ export async function handle(method, path, body) {
     const user = currentUser();
     if (!opt.open && !user) fail(401, "Alege un cont ca să intri.");
     if (opt.director && user.role !== "director") fail(403, "Doar directorul zonal are acces aici.");
-    return fn({ user, params, body: body || {} });
+    try { return await fn({ user, params, body: body || {} }); }
+    catch (e) { if (e instanceof crud.Invalid) fail(400, e.message); throw e; }
   }
   fail(404, "Rută necunoscută: " + path);
 }

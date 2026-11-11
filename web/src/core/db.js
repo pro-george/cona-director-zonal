@@ -4,12 +4,12 @@
 import initSqlJs from "sql.js";
 import wasmUrl from "sql.js/dist/sql-wasm.wasm?url";
 
-let _db = null, saveTimer = null;
+let _db = null, _SQL = null, saveTimer = null;
 const IDB = "director-zonal", STORE = "files", KEY = "app.db";
 const idb = () => new Promise((res, rej) => { const r = indexedDB.open(IDB, 1); r.onupgradeneeded = () => r.result.createObjectStore(STORE); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 async function idbGet() { try { const d = await idb(); return await new Promise((res) => { const g = d.transaction(STORE).objectStore(STORE).get(KEY); g.onsuccess = () => res(g.result || null); g.onerror = () => res(null); }); } catch { return null; } }
 async function idbPut(bytes) { try { const d = await idb(); await new Promise((res) => { const t = d.transaction(STORE, "readwrite"); t.objectStore(STORE).put(bytes, KEY); t.oncomplete = res; t.onerror = res; }); } catch { /* fără IndexedDB datele trăiesc doar cât e deschisă pagina */ } }
-const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => _db && idbPut(_db.export()), 400); };
+const persist = () => { clearTimeout(saveTimer); saveTimer = setTimeout(() => _db && idbPut(_db.export()), 150); };
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT UNIQUE, role TEXT, pass TEXT, site_id TEXT);
@@ -40,20 +40,30 @@ CREATE TABLE IF NOT EXISTS bim_deliveries (id INTEGER PRIMARY KEY, site_id TEXT,
 export async function openDb({ fresh = false } = {}) {
   const SQL = await initSqlJs({ locateFile: () => wasmUrl });
   const saved = fresh ? null : await idbGet();
-  // Când se schimbă structura tabelelor, crește SCHEMA_VERSION: bazele vechi de pe dispozitive sunt înlocuite cu una nouă.
-  const SCHEMA_VERSION = 2;
-  try {
-    _db = saved ? new SQL.Database(saved) : new SQL.Database();
-    if (saved && _db.exec("PRAGMA user_version")[0].values[0][0] !== SCHEMA_VERSION) _db = new SQL.Database();
-    _db.exec(SCHEMA);
-  } catch { _db = new SQL.Database(); _db.exec(SCHEMA); }
-  _db.exec("PRAGMA user_version = " + SCHEMA_VERSION);
+  try { _db = saved ? new SQL.Database(saved) : new SQL.Database(); _db.exec(SCHEMA); }
+  catch { _db = new SQL.Database(); _db.exec(SCHEMA); }
+  // Coloane apărute după prima versiune: se adaugă pe loc, fără să se piardă datele deja salvate pe dispozitiv.
+  for (const [table, col, type] of [["sites", "lat", "REAL"], ["sites", "lon", "REAL"], ["bim_elements", "baseline", "TEXT"]]) {
+    const cols = _db.exec(`PRAGMA table_info(${table})`)[0]?.values.map((r) => r[1]) || [];
+    if (!cols.includes(col)) _db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+  }
+  _db.exec("UPDATE bim_elements SET baseline=planned WHERE baseline IS NULL");
+  _SQL = SQL;
 }
 const clean = (p) => p.map((v) => (v === undefined ? null : v));
 export const q = (sql, ...p) => { const st = _db.prepare(sql); st.bind(clean(p)); const rows = []; while (st.step()) rows.push(st.getAsObject()); st.free(); return rows; };
 export const one = (sql, ...p) => q(sql, ...p)[0];
 export const run = (sql, ...p) => { _db.run(sql, clean(p)); const id = _db.exec("SELECT last_insert_rowid()")[0].values[0][0]; persist(); return { lastInsertRowid: id }; };
 export const exec = (sql) => { _db.exec(sql); persist(); };
+// Copie de siguranță: întreaga bază de date ca fișier, și restaurarea ei. Așa se mută datele și pe alt dispozitiv.
+export const exportBytes = () => _db.export();
+export async function importBytes(bytes) {
+  const test = new _SQL.Database(bytes);
+  const ok = test.exec("SELECT name FROM sqlite_master WHERE type='table' AND name IN ('sites','users','settings')")[0]?.values.length === 3;
+  if (!ok) throw new Error("Fișierul nu este o copie de siguranță a acestei aplicații.");
+  clearTimeout(saveTimer); _db = test; _db.exec(SCHEMA); await idbPut(_db.export());
+}
+export const flush = () => { clearTimeout(saveTimer); return idbPut(_db.export()); };
 export const J = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
 
 export const TZ = "Europe/Bucharest";

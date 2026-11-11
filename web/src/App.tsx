@@ -4,6 +4,7 @@ import { Icon, I, Err, Btn } from "./ui";
 import { Azi, Alerte, Meteo, Santiere, Santier } from "./Director";
 import { Aprobari, Autopilot, Replanificari, Valoare } from "./Work";
 import { ImportProiect } from "./Import";
+import { AddMenu, Echipa } from "./Edit";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
@@ -24,7 +25,7 @@ function Login({ onDone }: { onDone: () => void }) {
         <Err msg={err} />
         <div className="stack tight">{(data?.users || []).map((u: any) => (
           <button key={u.id} className="navrow" onClick={() => enter(u.id)}><div><strong>{u.name}</strong><span className="small muted">{u.role === "director" ? "Director zonal" : "Șef de șantier · " + u.site}</span></div><Icon d={I.chev} size={18} /></button>))}</div>
-        <p className="muted small">Versiune demonstrativă: datele sunt fictive și se păstrează doar pe acest dispozitiv. Conturile nu au parolă.</p>
+        <p className="muted small">{data?.mode === "own" ? "Datele se păstrează doar pe acest dispozitiv. Conturile nu au parolă." : "Versiune demonstrativă: datele sunt fictive și se păstrează doar pe acest dispozitiv. Conturile nu au parolă."}</p>
       </div>
     </div>
   );
@@ -38,7 +39,7 @@ export function Brand() {
 export default function App() {
   const me = useLoad<any>("/me");
   const route = useRoute();
-  const [badge, setBadge] = useState(0), [lost, setLost] = useState(0);
+  const [badge, setBadge] = useState(0), [lost, setLost] = useState(0), [adding, setAdding] = useState(false), [ver, setVer] = useState(0);
   useEffect(() => { const f = () => setLost((n) => n + 1); window.addEventListener("auth-lost", f); return () => window.removeEventListener("auth-lost", f); }, []);
   const user = me.data?.user;
   useEffect(() => { if (user?.role === "director") api("/approvals").then((d) => setBadge(d.items.filter((a: any) => a.status === "pending").length)).catch(() => {}); }, [user?.id, route.join("/")]);
@@ -49,7 +50,7 @@ export default function App() {
   if (user.role !== "director") return <SefHome me={me.data} route={route} logout={logout} />;
 
   const [page, arg] = route;
-  const tab = ["santiere", "santier", "import"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport"].includes(page) ? "mai-mult" : "azi";
+  const tab = ["santiere", "santier", "import"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa"].includes(page) ? "mai-mult" : "azi";
   let screen;
   switch (page) {
     case "alerte": screen = <Alerte />; break;
@@ -57,6 +58,7 @@ export default function App() {
     case "replanificari": screen = <Replanificari />; break;
     case "import": screen = <ImportProiect />; break;
     case "valoare": screen = <Valoare />; break;
+    case "echipa": screen = <Echipa />; break;
     case "santiere": screen = <Santiere />; break;
     case "santier": screen = <Santier id={arg} />; break;
     case "aprobari": screen = <Aprobari />; break;
@@ -74,11 +76,13 @@ export default function App() {
   );
   return (
     <>
-      <main>{screen}</main>
+      <main key={ver}>{screen}</main>
+      {!["intreaba", "raport", "sedinte", "import"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
+      {adding && <AddMenu me={me.data} onClose={() => setAdding(false)} onChanged={(go) => { setAdding(false); if (go) location.hash = go; setVer((n) => n + 1); me.reload(); }} />}
       <nav className="tabs" aria-label="Secțiuni">
         <div className="side-brand"><Brand /><span>Director zonal</span></div>
         <T id="azi" href="#/" icon={I.home} label="Azi" />
-        <T id="santiere" href="#/santiere" icon={I.sites} label="Șantiere" />
+        <T id="santiere" href="#/santiere" icon={I.sites} label="Proiecte" />
         <T id="aprobari" href="#/aprobari" icon={I.check} label="Aprobări" n={badge} />
         <T id="autopilot" href="#/autopilot" icon={I.bolt} label="Autopilot" />
         <T id="mai-mult" href="#/mai-mult" icon={I.more} label="Mai mult" />

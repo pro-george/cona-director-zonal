@@ -5,7 +5,7 @@ import { q, one, run } from "../db.js";
 export const SOURCE = "ERP simulat";
 
 export function budgetLines(siteId) {
-  return q("SELECT category, budget, actual, committed FROM erp_budget WHERE site_id=? ORDER BY id", siteId)
+  return q("SELECT id, category, budget, actual, committed FROM erp_budget WHERE site_id=? ORDER BY id", siteId)
     .map((l) => ({ ...l, remaining: l.budget - l.actual - l.committed, over: l.actual + l.committed > l.budget }));
 }
 
