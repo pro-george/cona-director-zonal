@@ -5,7 +5,13 @@ import { Brand } from "./App";
 
 const order: any = { critic: 0, atentie: 1, ok: 2, none: 3 };
 
-function SiteRow({ s }: { s: any }) {
+function SiteRow({ s, compact }: { s: any; compact?: boolean }) {
+  if (compact) return (
+    <a className="siterow compact" href={"#/santier/" + s.id}>
+      <div className="siterow-top"><strong>{s.name}</strong><Pill s={s.status} /></div>
+      {s.summary && <p className="clamp">{s.summary}</p>}
+    </a>
+  );
   return (
     <a className={"siterow st-" + s.status} href={"#/santier/" + s.id}>
       <div className="siterow-top"><Pill s={s.status} /><span className="muted small">{s.location}{s.workers != null ? " · " + s.workers + " oameni" : ""}</span></div>
@@ -31,60 +37,75 @@ export function Alert({ a, showSite = true }: { a: any; showSite?: boolean }) {
 
 export function Azi({ me }: { me: any }) {
   const { data, err, reload } = useLoad<any>("/home");
-  const [all, setAll] = useState(false), [q, setQ] = useState("");
+  const [more, setMore] = useState(false), [q, setQ] = useState("");
   if (!data) return err ? <div className="content"><Err msg={err} /></div> : <div className="splash" />;
   const h = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hour12: false }).format(new Date()));
   const hello = h < 11 ? "Bună dimineața" : h < 18 ? "Bună ziua" : "Bună seara";
   const b = data.brief, st = data.stats.today;
   const count = (k: string) => data.sites.filter((s: any) => s.status === k).length;
-  const alerts = all ? data.alerts : data.alerts.slice(0, 5);
+  const state = [[count("critic"), "cu blocaj"], [count("atentie"), "de urmărit"], [count("ok"), "în grafic"], [count("none"), "fără raport"]].filter(([n]) => n).map(([n, t]) => n + " " + t).join(" · ");
+  const crit = data.alerts.filter((a: any) => a.sev === "crit").length;
+  const decisions = b?.decisions || [];
   return (
     <div className="page">
       <header className="hero">
         <div className="hero-brand"><Brand /><span>Director zonal</span></div>
         <p className="eyebrow">{dayLong(data.today)}</p>
         <h1>{hello}, {me.user.name.split(" ")[0]}</h1>
-        <div className="seg" aria-hidden="true">{["critic", "atentie", "ok", "none"].map((k) => count(k) > 0 && <i key={k} className={"sg-" + k} style={{ flex: count(k) }} />)}</div>
-        <p className="legend">{["critic", "atentie", "ok", "none"].filter((k) => count(k)).map((k) => <span key={k} className={"lg-" + k}><b>{count(k)}</b> {STATUS[k].toLowerCase()}</span>)}</p>
+        <p className="state">{data.sites.length} șantiere: {state}</p>
       </header>
-      <a className="autostrip" href="#/autopilot">
-        <Icon d={I.bolt} size={20} />
-        <span><b>Autopilot</b> a făcut azi {st.actions} acțiuni în locul tău și ți-a economisit cam {mins(st.minutes)}.</span>
-        <Icon d={I.chev} size={18} />
-      </a>
       <div className="content">
         <Card className="brief">
-          <div className="row between"><span className="label">Briefingul zilei</span>{b && <Auto>scris la {time(b.ts)}</Auto>}</div>
+          <div className="row between"><span className="label">Briefingul zilei</span>{b && <Auto>Autopilot · {time(b.ts)}</Auto>}</div>
           {b ? <>
             <p className="headline">{b.headline}</p>
-            <p>{b.summary}</p>
-            {b.decisions?.length > 0 && <><span className="label">De decis azi</span><ol className="num">{b.decisions.map((d: string, i: number) => <li key={i}>{d}</li>)}</ol></>}
-            {b.risks?.length > 0 && <details><summary>Riscuri de urmărit ({b.risks.length})</summary><ul>{b.risks.map((d: string, i: number) => <li key={i}>{d}</li>)}</ul></details>}
-          </> : <Empty>Briefingul de azi nu a fost scris încă.</Empty>}
-          <Btn kind="ghost" onClick={async () => { await post("/brief"); await reload(); }}>{b ? "Rescrie briefingul acum" : "Scrie briefingul"}</Btn>
+            <p className="muted">{b.summary}</p>
+            {decisions.length > 0 && <><span className="label">De decis azi</span><ol className="num">{(more ? decisions : decisions.slice(0, 3)).map((d: string, i: number) => <li key={i}>{d}</li>)}</ol></>}
+            <div className="row between">
+              {decisions.length > 3 ? <button className="link" onClick={() => setMore(!more)}>{more ? "Arată mai puține" : `Încă ${decisions.length - 3} decizii`}</button> : <span />}
+              <button className="link" onClick={async () => { await post("/brief"); await reload(); }}>Rescrie</button>
+            </div>
+          </> : <><Empty>Briefingul de azi nu a fost scris încă.</Empty><Btn onClick={async () => { await post("/brief"); await reload(); }}>Scrie briefingul</Btn></>}
         </Card>
 
         <div className="tiles">
-          <a className="tile" href="#/aprobari"><b>{data.waiting.approvals}</b><span>aprobări te așteaptă</span></a>
-          <a className="tile ai" href="#/autopilot"><b>{data.waiting.drafts}</b><span>documente pregătite</span></a>
+          <a className="tile" href="#/aprobari"><b>{data.waiting.approvals}</b><span>aprobări</span></a>
+          <a className="tile" href="#/autopilot"><b>{data.waiting.drafts}</b><span>documente pregătite</span></a>
           <a className="tile" href="#/sarcini"><b className={data.waiting.overdue ? "t-crit" : ""}>{data.waiting.overdue}</b><span>sarcini întârziate</span></a>
         </div>
+
+        <div className="stack tight">
+          <a className="navrow" href="#/alerte"><div><strong>{data.alerts.length} alerte din sisteme</strong><span className="small muted">{crit ? crit + " critice · " : ""}rapoarte, ERP, BIM și meteo</span></div><Icon d={I.chev} size={18} /></a>
+          <a className="navrow" href="#/autopilot"><div><strong>Autopilot: {st.actions} acțiuni azi</strong><span className="small muted">Cam {mins(st.minutes)} economisite</span></div><Icon d={I.chev} size={18} /></a>
+        </div>
+
+        <H right={<a className="link" href="#/santiere">Detalii</a>}>Șantiere</H>
+        <div className="stack tight">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} compact />)}</div>
 
         <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) location.hash = "#/intreaba/" + encodeURIComponent(q.trim()); }}>
           <label htmlFor="askq" className="sr">Întreabă asistentul</label>
           <input id="askq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Întreabă orice despre zonă…" />
           <button className="iconbtn solid" aria-label="Trimite întrebarea"><Icon d={I.send} size={18} /></button>
         </form>
-
-        <H right={<span className="muted small">{data.alerts.length} active</span>}>Alerte din sisteme</H>
-        {data.alerts.length ? <ul className="alerts">{alerts.map((a: any, i: number) => <Alert key={i} a={a} />)}</ul> : <Empty>Nicio alertă activă.</Empty>}
-        {data.alerts.length > 5 && <button className="link" onClick={() => setAll(!all)}>{all ? "Arată mai puține" : `Arată toate cele ${data.alerts.length}`}</button>}
-
-        <H>Șantiere</H>
-        <div className="stack">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} />)}</div>
-        <p className="foot">Datele ERP și BIM sunt simulate. Șantierele, firmele și cifrele sunt fictive.</p>
+        <p className="foot">Date demonstrative. ERP și BIM simulate.</p>
       </div>
     </div>
+  );
+}
+
+export function Alerte() {
+  const { data, err } = useLoad<any>("/home");
+  const [src, setSrc] = useState("");
+  const all = data?.alerts || [], sources = Array.from(new Set(all.map((a: any) => a.source))) as string[];
+  const list = src ? all.filter((a: any) => a.source === src) : all;
+  return (
+    <Page title="Alerte" eyebrow={data ? all.length + " active" : ""} back="#/">
+      <Err msg={err} />
+      {!data ? <Loading /> : <>
+        <div className="chips"><button className="chip" aria-pressed={!src} onClick={() => setSrc("")}>Toate</button>{sources.map((x) => <button key={x} className="chip" aria-pressed={src === x} onClick={() => setSrc(x)}>{x}</button>)}</div>
+        {list.length ? <ul className="alerts">{list.map((a: any, i: number) => <Alert key={i} a={a} />)}</ul> : <Empty>Nicio alertă activă.</Empty>}
+      </>}
+    </Page>
   );
 }
 

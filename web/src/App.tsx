@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { api, post, useLoad } from "./api";
 import { Icon, I, Err, Btn } from "./ui";
-import { Azi, Santiere, Santier } from "./Director";
+import { Azi, Alerte, Santiere, Santier } from "./Director";
 import { Aprobari, Autopilot } from "./Work";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
   const read = () => (location.hash.replace(/^#\/?/, "") || "").split("/");
   const [r, setR] = useState(read);
-  useEffect(() => { const f = () => { setR(read()); window.scrollTo(0, 0); }; window.addEventListener("hashchange", f); return () => window.removeEventListener("hashchange", f); }, []);
+  useEffect(() => { const f = () => { setR(read()); document.querySelector("main")?.scrollTo(0, 0); }; window.addEventListener("hashchange", f); return () => window.removeEventListener("hashchange", f); }, []);
   return r;
 }
 
@@ -51,6 +51,7 @@ export default function App() {
   const tab = ["santiere", "santier"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport"].includes(page) ? "mai-mult" : "azi";
   let screen;
   switch (page) {
+    case "alerte": screen = <Alerte />; break;
     case "santiere": screen = <Santiere />; break;
     case "santier": screen = <Santier id={arg} />; break;
     case "aprobari": screen = <Aprobari />; break;

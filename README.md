@@ -51,4 +51,4 @@ Automatizările și orarul lor sunt definite în `web/src/core/automations.js`.
 - Recomandările la aprobări sunt reguli față de bugetul rămas, nu AI: previzibile și ușor de verificat.
 - „Timp economisit” este o estimare: fiecare tip de acțiune are un număr fix de minute.
 - Dictarea folosește Web Speech API din browser (Chrome, Safari).
-- Culorile și fontul sunt în `web/src/theme.css`, citite din stilurile cona.ro; logo-ul se pune în `web/public/brand/logo.svg`.
+- Culorile și fontul sunt în `web/src/theme.css`, citite din stilurile cona.ro; logo-ul (varianta color, pentru fundal deschis) se pune în `web/public/brand/logo.svg`.
