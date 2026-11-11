@@ -1,0 +1,3 @@
+node_modules
+# docs/ este publicat de GitHub Pages, deci rămâne în repo
+.env
