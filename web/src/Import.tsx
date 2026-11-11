@@ -45,7 +45,7 @@ export function ImportProiect() {
   const fmt = (v: any) => (v instanceof Date ? v.toLocaleDateString("ro-RO") : v == null ? "" : String(v));
 
   return (
-    <Page title="Importă proiect" eyebrow="Din Excel sau CSV" back="#/santiere">
+    <Page title="Importă proiect" eyebrow="Din Excel sau CSV" back="#/santiere" narrow>
       <div className="steps" aria-hidden="true"><i className="on" /><i className={sheets || done ? "on" : ""} /><i className={done ? "on" : ""} /></div>
       <Err msg={err} />
 

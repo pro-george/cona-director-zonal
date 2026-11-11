@@ -303,3 +303,37 @@ ul.plain li { padding: 14px 16px; }
 .tblwrap table { border-collapse: collapse; font-size: 13px; white-space: nowrap; }
 .tblwrap th, .tblwrap td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; }
 .tblwrap th { background: var(--surface-2); font-weight: 600; }
+
+/* ---------- desktop: meniu lateral, conținut pe coloane ---------- */
+.side-brand, .side-foot { display: none; }
+.col-main, .col-side { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+@media (min-width: 1000px) {
+  #root { flex-direction: row; }
+  main { order: 2; }
+  .tabs, .tabs.three { order: 1; display: flex; flex-direction: column; gap: 4px; width: 232px; flex: none; padding: 22px 14px; border-top: 0; border-right: 1px solid var(--line); }
+  .tabs a { flex-direction: row; gap: 12px; font-size: 15px; padding: 11px 12px; margin: 0; border-top: 0; border-radius: 10px; justify-content: flex-start; }
+  .tabs a[aria-current="page"] { background: var(--tint); border-top-color: transparent; }
+  .badge { position: static; margin-left: 2px; }
+  .ti { display: flex; align-items: center; gap: 6px; }
+  .side-brand { display: flex; align-items: center; gap: 10px; padding: 4px 12px 22px; font-weight: 700; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--brand); }
+  .side-foot { display: flex; flex-direction: column; gap: 2px; margin-top: auto; padding: 12px; border-top: 1px solid var(--line); }
+  .page { max-width: 1180px; }
+  .page.narrow { max-width: 760px; margin-left: 0; }
+  .content { padding: 28px 36px 40px; }
+  .bar { padding: 30px 36px 10px; position: static; }
+  .bar h1 { font-size: 30px; }
+  .hero { padding: 34px 36px 0; }
+  .hero-brand { display: none; }
+  .hero h1 { font-size: 36px; }
+  .content.azi { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); gap: 28px; align-items: start; }
+  .content.azi .foot { grid-column: 1 / -1; text-align: left; }
+  .col-main .stack.tight { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .stack.tight.grid2 { gap: 12px; }
+  ul.alerts.grid2 { gap: 10px; }
+  .zones { grid-template-columns: repeat(4, 1fr); }
+  .whoami { max-width: 760px; margin: 0; padding: 26px 36px 0; }
+  .login { margin-top: 6vh; }
+  .headline { font-size: 24px; }
+  .siterow.compact .clamp { -webkit-line-clamp: 2; }
+}

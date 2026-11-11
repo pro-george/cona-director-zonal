@@ -15,7 +15,7 @@ export function Aprobari() {
       <a className="autostrip inset" href="#/autopilot"><span>Cererile sub <b>{lei(data.limit)}</b> care se încadrează în buget se aprobă singure. Restul vin aici, deja verificate.</span></a>
       <Err msg={msg} />
       {pending.length === 0 && <Empty>Nicio cerere în așteptare.</Empty>}
-      <div className="stack">{pending.map((a: any) => (
+      <div className="stack grid2">{pending.map((a: any) => (
         <Card key={a.id}>
           <div className="row between"><span className="label">{TYPE[a.type] || a.type}</span><span className="muted small">{a.site}</span></div>
           <strong className="big">{a.title}</strong>
@@ -88,12 +88,12 @@ export function Autopilot() {
       <AiKey data={data} reload={reload} />
 
       <H right={<span className="muted small">{drafts.length} de trimis</span>}>Documente pregătite</H>
-      {drafts.length ? <div className="stack">{drafts.map((d: any) => <Draft key={d.id} d={d} reload={reload} />)}</div> : <Empty>Nimic de trimis acum.</Empty>}
+      {drafts.length ? <div className="stack grid2">{drafts.map((d: any) => <Draft key={d.id} d={d} reload={reload} />)}</div> : <Empty>Nimic de trimis acum.</Empty>}
       <p className="small muted">Aplicația nu trimite nimic singură: tu copiezi textul și apeși „Trimis” după ce l-ai expediat.</p>
 
       <H>Automatizări</H>
       {msg && <p className="small muted" role="status">{msg}</p>}
-      <div className="stack tight">{data.automations.map((a: any) => (
+      <div className="stack tight grid2">{data.automations.map((a: any) => (
         <Card key={a.key} className={a.enabled ? "" : "off"}>
           <div className="row between">
             <strong>{a.name}</strong>
@@ -129,7 +129,7 @@ export function Replanificari() {
       <p className="small muted">Când vremea sau o livrare strică graficul, Autopilotul calculează unul nou din BIM. Nimic nu se schimbă până nu aprobi.</p>
       <Err msg={msg} />
       {open.length === 0 && <Empty>Nicio propunere acum. Graficele sunt în regulă cu prognoza și livrările.</Empty>}
-      <div className="stack">{open.map((r: any) => { const d = r.data, im = d.impact; return (
+      <div className="stack grid2">{open.map((r: any) => { const d = r.data, im = d.impact; return (
         <Card key={r.id}>
           <div className="row between"><Auto>propus {when(r.ts)}</Auto><Src>Meteo × BIM</Src></div>
           <strong className="big">{d.site}</strong>

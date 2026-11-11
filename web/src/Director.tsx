@@ -54,7 +54,8 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
         <h1>{hello}, {me.user.name.split(" ")[0]}</h1>
         <p className="state">{data.sites.length} șantiere: {state}</p>
       </header>
-      <div className="content">
+      <div className="content azi">
+        <div className="col-main">
         <Card className="brief">
           <div className="row between"><span className="label">Briefingul zilei</span>{b && <Auto>Autopilot · {time(b.ts)}</Auto>}</div>
           {b ? <>
@@ -68,6 +69,11 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
           </> : <><Empty>Briefingul de azi nu a fost scris încă.</Empty><Btn onClick={async () => { await post("/brief"); await reload(); }}>Scrie briefingul</Btn></>}
         </Card>
 
+        <H right={<a className="link" href="#/santiere">Detalii</a>}>Șantiere</H>
+        <div className="stack tight">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} compact />)}</div>
+
+        </div>
+        <div className="col-side">
         <div className="tiles">
           <a className="tile" href="#/aprobari"><b>{data.waiting.approvals}</b><span>aprobări</span></a>
           <a className="tile" href="#/autopilot"><b>{data.waiting.drafts}</b><span>documente pregătite</span></a>
@@ -80,14 +86,12 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
           <a className="navrow" href="#/autopilot"><div><strong>Autopilot: {st.actions} acțiuni azi</strong><span className="small muted">Cam {mins(st.minutes)} economisite</span></div><Icon d={I.chev} size={18} /></a>
         </div>
 
-        <H right={<a className="link" href="#/santiere">Detalii</a>}>Șantiere</H>
-        <div className="stack tight">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} compact />)}</div>
-
         <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) location.hash = "#/intreaba/" + encodeURIComponent(q.trim()); }}>
           <label htmlFor="askq" className="sr">Întreabă asistentul</label>
           <input id="askq" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Întreabă orice despre zonă…" />
           <button className="iconbtn solid" aria-label="Trimite întrebarea"><Icon d={I.send} size={18} /></button>
         </form>
+        </div>
         <p className="foot">Date demonstrative. ERP și BIM simulate.</p>
       </div>
     </div>
@@ -104,7 +108,7 @@ export function Alerte() {
       <Err msg={err} />
       {!data ? <Loading /> : <>
         <div className="chips"><button className="chip" aria-pressed={!src} onClick={() => setSrc("")}>Toate</button>{sources.map((x) => <button key={x} className="chip" aria-pressed={src === x} onClick={() => setSrc(x)}>{x}</button>)}</div>
-        {list.length ? <ul className="alerts">{list.map((a: any, i: number) => <Alert key={i} a={a} />)}</ul> : <Empty>Nicio alertă activă.</Empty>}
+        {list.length ? <ul className="alerts grid2">{list.map((a: any, i: number) => <Alert key={i} a={a} />)}</ul> : <Empty>Nicio alertă activă.</Empty>}
       </>}
     </Page>
   );
@@ -115,7 +119,7 @@ export function Santiere() {
   return (
     <Page title="Șantiere" eyebrow="Zona ta" right={<a className="btn ghost sm" href="#/import">Importă</a>}>
       <Err msg={err} />
-      {!data ? <Loading /> : <div className="stack">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} />)}</div>}
+      {!data ? <Loading /> : <div className="stack grid2">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} />)}</div>}
     </Page>
   );
 }
@@ -131,7 +135,7 @@ export function Santier({ id }: { id: string }) {
   const DELIV: any = { livrat: "Livrat", planificat: "Planificat", intarziat: "Întârziat", in_drum: "În drum" };
   const ZS: any = { gata: "Gata", in_lucru: "În lucru", intarziat: "În urmă", planificat: "Planificat" };
   return (
-    <Page title={site.name} eyebrow={site.location + " · " + site.client} back="#/santiere">
+    <Page title={site.name} eyebrow={site.location + " · " + site.client} back="#/santiere" narrow>
       <div className="segctl" role="tablist">{[["rezumat", "Rezumat"], ["bani", "Bani"], ["stadiu", "Stadiu"], ["meteo", "Meteo"], ["rapoarte", "Rapoarte"]].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}</div>
 
       {tab === "rezumat" && <>

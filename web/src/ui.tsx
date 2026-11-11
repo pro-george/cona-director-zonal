@@ -23,9 +23,9 @@ export const Pill = ({ s }: { s: string }) => <span className={"pill s-" + (STAT
 export const Src = ({ children }: { children: ReactNode }) => <span className="src">{children}</span>;
 export const Auto = ({ children = "Autopilot" }: { children?: ReactNode }) => <span className="auto"><Icon d={I.bolt} size={12} />{children}</span>;
 
-export function Page({ title, eyebrow, back, children, right }: { title: string; eyebrow?: string; back?: string; children: ReactNode; right?: ReactNode }) {
+export function Page({ title, eyebrow, back, children, right, narrow }: { title: string; eyebrow?: string; back?: string; children: ReactNode; right?: ReactNode; narrow?: boolean }) {
   return (
-    <div className="page">
+    <div className={"page" + (narrow ? " narrow" : "")}>
       <header className="bar">
         {back && <a className="iconbtn" href={back} aria-label="Înapoi"><Icon d={I.back} /></a>}
         <div className="bar-t">{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1></div>

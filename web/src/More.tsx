@@ -6,7 +6,7 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
   const L = ({ href, t, d }: any) => <a className="navrow" href={href}><div><strong>{t}</strong><span className="small muted">{d}</span></div><Icon d={I.chev} size={18} /></a>;
   return (
     <Page title="Mai mult" eyebrow={me.user.name}>
-      <div className="stack tight">
+      <div className="stack tight grid2">
         <L href="#/import" t="Importă proiect" d="Adu bugetul și graficul din Excel; coloanele se potrivesc singure" />
         <L href="#/sedinte" t="Ședințe" d="Dictezi ce s-a discutat, primești minuta și sarcinile" />
         <L href="#/sarcini" t="Sarcini" d="Tot ce e deschis, pe responsabili și termene" />
@@ -26,7 +26,7 @@ export function Sedinte({ me }: { me: any }) {
   const [title, setTitle] = useState(""), [site, setSite] = useState(""), [text, setText] = useState(""), [msg, setMsg] = useState("");
   const save = async () => { try { await post("/meetings", { title: title || "Ședință", site_id: site || null, text }); setText(""); setTitle(""); setMsg(""); await reload(); } catch (e: any) { setMsg(e.message); } };
   return (
-    <Page title="Ședințe" back="#/mai-mult">
+    <Page title="Ședințe" back="#/mai-mult" narrow>
       <Card>
         <span className="label">Ședință nouă</span>
         <label htmlFor="mt">Titlu<input id="mt" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Comandament cu beneficiarul" /></label>
@@ -82,7 +82,7 @@ export function Conducere() {
   const [msg, setMsg] = useState("");
   const r = data?.reports[0];
   return (
-    <Page title="Raport pentru conducere" back="#/mai-mult">
+    <Page title="Raport pentru conducere" back="#/mai-mult" narrow>
       <Card>
         <p className="small muted">Ciorna se scrie singură vinerea la 14:00, din rapoartele de șantier, ERP și BIM. O poți cere oricând.</p>
         <Btn onClick={async () => { try { await post("/mgmt"); setMsg(""); await reload(); } catch (e: any) { setMsg(e.message); } }}>{r ? "Scrie din nou acum" : "Scrie raportul acum"}</Btn>
@@ -105,7 +105,7 @@ export function Intreaba({ q }: { q: string }) {
   useEffect(() => { if (q) ask(q); }, []);
   const ideas = ["Ce mă costă întârzierea de la hală?", "Unde cheltuim mai repede decât avansăm?", "Ce facturi sunt restante?", "Ce am de decis azi?"];
   return (
-    <Page title="Întreabă asistentul" back="#/mai-mult">
+    <Page title="Întreabă asistentul" back="#/mai-mult" narrow>
       <p className="small muted">Răspunde doar din datele aplicației: rapoarte, ERP și BIM.</p>
       {log.length === 0 && !busy && <div className="chips">{ideas.map((i) => <button key={i} className="chip" onClick={() => ask(i)}>{i}</button>)}</div>}
       <div className="stack tight">{log.map((m, i) => <div key={i} className="qa"><p className="q">{m.q}</p><Card className={m.err ? "over" : ""}><Md text={m.a} />{m.by === "demo" && <span className="small muted">Răspuns compus din reguli (mod demo).</span>}</Card></div>)}</div>
@@ -127,7 +127,7 @@ export function RaportNou({ me, back, onSent }: { me: any; back?: string; onSent
     setBusy(false);
   };
   return (
-    <Page title="Raport de șantier" eyebrow="Două minute, cu vocea" back={back}>
+    <Page title="Raport de șantier" eyebrow="Două minute, cu vocea" back={back} narrow>
       {res && <Card className="brief">
         <div className="row between"><Pill s={res.report.status} /><Auto>structurat automat</Auto></div>
         <p className="headline sm">{res.report.summary}</p>
@@ -169,6 +169,7 @@ export function SefHome({ me, route, logout }: { me: any; route: string[]; logou
         {tab === "mesaje" && <Page title="Mesaje" eyebrow={me.user.name}>{my.data?.notifications.length ? <ul className="plain">{my.data.notifications.map((n: any) => <li key={n.id}><span className="small muted">{when(n.ts)}</span><span>{n.text}</span></li>)}</ul> : <Empty>Niciun mesaj.</Empty>}</Page>}
       </main>
       <nav className="tabs three" aria-label="Secțiuni">
+        <div className="side-brand"><span className="logo-fallback" aria-hidden="true" /><span>Director zonal</span></div>
         <T id="raport" href="#/" icon={I.mic} label="Raport" />
         <T id="sarcini" href="#/sarcini" icon={I.check} label="Sarcini" />
         <T id="mesaje" href="#/mesaje" icon={I.more} label="Mesaje" />

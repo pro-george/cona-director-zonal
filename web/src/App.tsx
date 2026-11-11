@@ -74,11 +74,13 @@ export default function App() {
     <>
       <main>{screen}</main>
       <nav className="tabs" aria-label="Secțiuni">
+        <div className="side-brand"><Brand /><span>Director zonal</span></div>
         <T id="azi" href="#/" icon={I.home} label="Azi" />
         <T id="santiere" href="#/santiere" icon={I.sites} label="Șantiere" />
         <T id="aprobari" href="#/aprobari" icon={I.check} label="Aprobări" n={badge} />
         <T id="autopilot" href="#/autopilot" icon={I.bolt} label="Autopilot" />
         <T id="mai-mult" href="#/mai-mult" icon={I.more} label="Mai mult" />
+        <div className="side-foot"><span className="small muted">{user.name}</span><button className="link" onClick={logout}>Schimbă contul</button></div>
       </nav>
     </>
   );
