@@ -35,7 +35,7 @@ export function Dosar({ id }: { id: string }) {
     <Page title="Dosar de întârzieri" eyebrow={data.site.name} back={"#/santier/" + id} narrow right={<button className="btn ghost sm" onClick={() => edit()}>Adaugă</button>}>
       <Card>
         <div className="kpis"><div><b>{zile(data.total)}</b><span>pierdute sau afectate</span></div><div><b>{zile(data.extensionDays)}</b><span>de cerut ca prelungire</span></div><div><b>{lei(data.cost)}</b><span>costuri de revendicat</span></div></div>
-        <ul className="causes">{Object.entries(data.causes).map(([k, v]: any) => <li key={k}><span className={"pill " + TONE[k]}>{v.label}</span><b>{zile(data.by[k])}</b><span className="small muted">{v.claim}</span></li>)}</ul>
+        <ul className="causes">{Object.entries(data.causes).map(([k, v]: any) => <li key={k}><div className="row between"><span className={"pill " + TONE[k]}>{v.label}</span><b>{zile(data.by[k])}</b></div><span className="small muted">{v.claim}</span></li>)}</ul>
         <p className="small muted">Costul este {zile(data.claimDays)} × {lei(data.orgDay)} pe zi (ipoteza din ecranul Valoare).</p>
       </Card>
       <Card>

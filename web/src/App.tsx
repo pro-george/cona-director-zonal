@@ -85,13 +85,14 @@ export default function App() {
     case "raport": screen = <RaportNou me={me.data} back="#/mai-mult" />; break;
     default: screen = <Azi me={me.data} logout={logout} />;
   }
+  const fabHere = !page || ["santiere", "santier"].includes(page); // pe telefon butonul plutitor apare doar unde se adaugă des
   const T = ({ id, href, icon, label, n, cls }: any) => (
     <a href={href} className={cls} aria-current={tab === id ? "page" : undefined}><span className="ti"><Icon d={icon} />{n > 0 && <b className="badge">{n}</b>}</span>{label}</a>
   );
   return (
     <>
-      <main key={ver}>{screen}</main>
-      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare", "raport-beneficiar", "cash", "stocuri"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
+      <main key={ver} className={fabHere ? "has-fab" : ""}>{screen}</main>
+      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare", "raport-beneficiar", "cash", "stocuri"].includes(page) && <button className={"fab" + (fabHere ? " keep" : "")} onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
       {adding && <AddMenu me={me.data} onClose={() => setAdding(false)} onChanged={(go) => { setAdding(false); if (go) location.hash = go; setVer((n) => n + 1); me.reload(); }} />}
       <nav className="tabs" aria-label="Secțiuni">
         <div className="side-brand"><Brand /><span>Director zonal</span></div>

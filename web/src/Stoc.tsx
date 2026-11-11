@@ -43,9 +43,9 @@ export function Stocuri({ me, logout }: { me: any; logout?: () => void }) {
           <button className={"tile" + (onlyLow ? " on" : "")} onClick={() => { setTab("stoc"); setOnlyLow(!onlyLow); }}><b className={st.low ? "t-crit" : ""}>{st.low}</b><span>sub minim</span></button>
           <button className="tile" onClick={() => setTab("comenzi")}><b>{st.open}</b><span>comenzi deschise</span></button>
           <button className="tile" onClick={() => setTab("comenzi")}><b>{st.toConfirm + st.proposed}</b><span>de decis</span></button>
-          <div className="tile"><b className="sm">{mil(st.value)}</b><span>valoare stoc</span></div>
+          <div className="tile"><b className="sm">{mil(st.value).replace(" lei", "")}</b><span>lei în stoc</span></div>
         </div>
-        <div className="segctl" role="tablist">{[["stoc", "Stoc"], ["comenzi", "Comenzi"], ["furnizori", "Furnizori"], ["miscari", "Mișcări"]].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}</div>
+        <div className="segctl four" role="tablist">{[["stoc", "Stoc"], ["comenzi", "Comenzi"], ["furnizori", "Furnizori"], ["miscari", "Mișcări"]].map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}</button>)}</div>
 
         {tab === "stoc" && <>
           {data.locations.length === 0 && <Card><p className="headline">Începe cu prima locație</p><p className="muted">Adaugă o fabrică, stația de betoane sau depozitul, apoi articolele ținute acolo.</p><Btn onClick={() => locForm()}>Adaugă o locație</Btn></Card>}
@@ -81,9 +81,9 @@ export function Stocuri({ me, logout }: { me: any; logout?: () => void }) {
               <span className="small muted">{o.by ? "Cerută de " + o.by : ""}{o.note ? " · " + o.note : ""}</span>
               <div className="row two">
                 <Btn kind="ghost" onClick={() => act(`/stock/orders/${o.id}`, { action: "cancel" })}>Anulează</Btn>
-                {o.kind === "intern" && o.status === "ceruta" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "confirm" })}>Confirmă și rezervă</Btn>}
-                {o.kind === "intern" && o.status === "confirmata" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "deliver" })}>Marchează livrată</Btn>}
-                {o.kind === "furnizor" && o.status === "propusa" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "send" })}>Trimite comanda</Btn>}
+                {o.kind === "intern" && o.status === "ceruta" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "confirm" })}>Confirmă</Btn>}
+                {o.kind === "intern" && o.status === "confirmata" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "deliver" })}>Livrată</Btn>}
+                {o.kind === "furnizor" && o.status === "propusa" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "send" })}>Trimite</Btn>}
                 {o.kind === "furnizor" && o.status === "trimisa" && <Btn onClick={() => act(`/stock/orders/${o.id}`, { action: "receive" })}>Recepționează</Btn>}
               </div>
             </Card>))}</div> : <Empty>Nicio comandă deschisă.</Empty>}

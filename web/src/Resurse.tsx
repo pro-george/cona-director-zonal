@@ -24,7 +24,7 @@ export function Resurse() {
           {e.advice && <div className="rec"><div className="row between"><strong>Propunere</strong><Auto>Autopilot</Auto></div><p>{e.advice.text}</p></div>}
           {e.idleDays > 0 && <div className="row two">
             <Btn kind="ghost" onClick={() => act(`/equipment/${e.id}/release`)}>Eliberează-l</Btn>
-            {e.advice?.moveTo ? <Btn onClick={() => act(`/equipment/${e.id}/move`, { site_id: e.advice.moveTo })}>Mută la {e.advice.moveName.split(" ").slice(0, 2).join(" ")}</Btn> : <Btn onClick={() => setSheet({ title: "Mută " + e.name, fields: [{ key: "site_id", label: "Pe ce proiect", type: "select", options: siteOpts }], initial: { site_id: siteOpts[0]?.[0] }, saveLabel: "Mută", onSave: async (v: any) => { await post(`/equipment/${e.id}/move`, v); await reload(); } })}>Mută pe alt proiect</Btn>}
+            {e.advice?.moveTo ? <Btn onClick={() => act(`/equipment/${e.id}/move`, { site_id: e.advice.moveTo })}>Mută-l acolo</Btn> : <Btn onClick={() => setSheet({ title: "Mută " + e.name, fields: [{ key: "site_id", label: "Pe ce proiect", type: "select", options: siteOpts }], initial: { site_id: siteOpts[0]?.[0] }, saveLabel: "Mută", onSave: async (v: any) => { await post(`/equipment/${e.id}/move`, v); await reload(); } })}>Mută pe alt proiect</Btn>}
           </div>}
         </Card>))}</div> : <Empty>Niciun utilaj trecut. Se adaugă din fișa proiectului.</Empty>}
 

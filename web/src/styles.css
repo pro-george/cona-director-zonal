@@ -467,3 +467,22 @@ button.tile { font: inherit; cursor: pointer; }
 .lvbar u { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--ink); opacity: .55; }
 ul.stock .unit { font-weight: 400; color: var(--muted); font-size: 13px; }
 ul.stock li { gap: 4px; }
+
+/* reparații pentru telefon */
+.pill { white-space: nowrap; flex-shrink: 0; }
+.segctl.four { grid-template-columns: repeat(4, 1fr); }
+.causes li { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 8px 0; border-top: 1px solid var(--line); }
+.causes li:first-child { border-top: 0; }
+.bar-t .eyebrow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drop strong { font-weight: 700; color: var(--ink); }
+.row.between > strong, .row.between > .big { min-width: 0; }
+@media (max-width: 999px) {
+  .fab { width: 52px; height: 52px; right: 16px; }
+  .fab:not(.keep) { display: none; }
+  main.has-fab .content { padding-bottom: 96px; }
+}
+@media (max-width: 400px) {
+  .apstats b { font-size: 18px; }
+  .tiles.four .tile b { font-size: 24px; } .tiles.four .tile b.sm { font-size: 15px; line-height: 1.9; }
+  .segctl button { font-size: 12.5px; }
+}

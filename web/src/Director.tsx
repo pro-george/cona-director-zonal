@@ -74,7 +74,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
               <button className="link" onClick={async () => { await post("/brief"); await reload(); }}>Rescrie briefingul</button></>}
             <div className="row two">
               {canSpeak ? <button className="btn listen" onClick={listen}><Icon d={reading ? I.stop : I.play} size={18} />{reading ? "Oprește" : "Ascultă"}</button> : <span />}
-              <button className="btn ghost" onClick={() => setMore(!more)}>{more ? "Strânge" : decisions.length ? `Citește · ${decisions.length} decizii` : "Citește"}</button>
+              <button className="btn ghost" onClick={() => setMore(!more)}>{more ? "Strânge" : decisions.length ? `Citește (${decisions.length})` : "Citește"}</button>
             </div>
           </> : <><Empty>Briefingul de azi nu a fost scris încă.</Empty><Btn onClick={async () => { await post("/brief"); await reload(); }}>Scrie briefingul</Btn></>}
         </Card>
@@ -269,7 +269,7 @@ export function Meteo() {
   if (!data) return <Page title="Meteo" back="#/">{err ? <Err msg={err} /> : <Loading />}</Page>;
   const total = data.sites.reduce((a: number, s: any) => a + s.riskDays, 0);
   return (
-    <Page title="Meteo și lucrări" eyebrow={total ? total + " zile de lucru cu risc" : "Fără risc în 7 zile"} back="#/" right={<Btn kind="ghost sm" onClick={async () => { const r = await post("/weather"); setMsg(r.result); await reload(); }}>Actualizează</Btn>}>
+    <Page title="Meteo" eyebrow={total ? total + " zile de lucru cu risc" : "Fără risc în 7 zile"} back="#/" right={<Btn kind="ghost sm" onClick={async () => { const r = await post("/weather"); setMsg(r.result); await reload(); }}>Actualizează</Btn>}>
       <p className="small muted">Prognoza pe 7 zile a fiecărui șantier, suprapusă peste lucrările planificate în BIM. O zi e marcată doar dacă în ea e planificată o lucrare pe care vremea o oprește.</p>
       {msg && <p className="small muted" role="status">{msg}</p>}
       <div className="stack grid2">{[...data.sites].sort((a: any, b: any) => b.riskDays - a.riskDays).map((s: any) => { const risky = new Set(s.risks.map((r: any) => r.day)); return (

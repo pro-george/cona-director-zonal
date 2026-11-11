@@ -50,6 +50,7 @@ export const F = {
 export function AddMenu({ me, onClose, onChanged }: { me: any; onClose: () => void; onChanged: (go?: string) => void }) {
   const team = useLoad<any>("/team");
   const [form, setForm] = useState<string>("");
+  useEffect(() => { const k = (e: KeyboardEvent) => e.key === "Escape" && onClose(); document.addEventListener("keydown", k); return () => document.removeEventListener("keydown", k); }, []);
   const users = team.data?.users || [], sites = team.data?.sites || me.sites;
   const go = (h: string) => { onClose(); location.hash = h; };
   if (form === "project") return <Sheet title="Proiect nou" fields={F.project(users.filter((u: any) => u.role === "sef"))} saveLabel="Creează proiectul" onClose={onClose} note="După creare adaugi bugetul și zonele din fișa proiectului, sau le imporți din Excel."
