@@ -9,6 +9,7 @@ declare const __HAS_LOGO__: boolean;
 const HAS_LOGO = __HAS_LOGO__;
 import { Dosare, Dosar } from "./Dosar";
 import { Resurse, Cash, RaportBeneficiar } from "./Resurse";
+import { Stocuri } from "./Stoc";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
@@ -28,7 +29,7 @@ function Login({ onDone }: { onDone: () => void }) {
         <span className="label">Intră ca</span>
         <Err msg={err} />
         <div className="stack tight">{(data?.users || []).map((u: any) => (
-          <button key={u.id} className="navrow" onClick={() => enter(u.id)}><div><strong>{u.name}</strong><span className="small muted">{u.role === "director" ? "Director zonal" : "Șef de șantier · " + u.site}</span></div><Icon d={I.chev} size={18} /></button>))}</div>
+          <button key={u.id} className="navrow" onClick={() => enter(u.id)}><div><strong>{u.name}</strong><span className="small muted">{u.role === "director" ? "Director zonal" : u.role === "gestionar" ? "Gestionar · fabrici și depozit" : "Șef de șantier · " + u.site}</span></div><Icon d={I.chev} size={18} /></button>))}</div>
         <p className="muted small">{data?.mode === "own" ? "Datele se păstrează doar pe acest dispozitiv. Conturile nu au parolă." : "Versiune demonstrativă: datele sunt fictive și se păstrează doar pe acest dispozitiv. Conturile nu au parolă."}</p>
       </div>
     </div>
@@ -53,10 +54,11 @@ export default function App() {
   if (!user) return me.err || lost ? <Login onDone={() => { setLost(0); me.reload(); }} /> : <div className="splash"><p>Se pregătește aplicația…</p></div>;
   const logout = async () => { await post("/logout"); location.hash = ""; me.setData(null as any); setLost((n) => n + 1); };
 
+  if (user.role === "gestionar") return <main><Stocuri me={me.data} logout={logout} /></main>;
   if (user.role !== "director") return <SefHome me={me.data} route={route} logout={logout} />;
 
   const [page, arg] = route;
-  const tab = ["santiere", "santier", "import", "dosar", "raport-beneficiar"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa", "dosare", "resurse", "cash"].includes(page) ? "mai-mult" : "azi";
+  const tab = ["santiere", "santier", "import", "dosar", "raport-beneficiar"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "stocuri" ? "stocuri" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa", "dosare", "resurse", "cash"].includes(page) ? "mai-mult" : "azi";
   let screen;
   switch (page) {
     case "alerte": screen = <Alerte />; break;
@@ -67,6 +69,7 @@ export default function App() {
     case "echipa": screen = <Echipa />; break;
     case "dosare": screen = <Dosare />; break;
     case "resurse": screen = <Resurse />; break;
+    case "stocuri": screen = <Stocuri me={me.data} />; break;
     case "cash": screen = <Cash />; break;
     case "raport-beneficiar": screen = <RaportBeneficiar id={arg} />; break;
     case "dosar": screen = <Dosar id={arg} />; break;
@@ -82,19 +85,20 @@ export default function App() {
     case "raport": screen = <RaportNou me={me.data} back="#/mai-mult" />; break;
     default: screen = <Azi me={me.data} logout={logout} />;
   }
-  const T = ({ id, href, icon, label, n }: any) => (
-    <a href={href} aria-current={tab === id ? "page" : undefined}><span className="ti"><Icon d={icon} />{n > 0 && <b className="badge">{n}</b>}</span>{label}</a>
+  const T = ({ id, href, icon, label, n, cls }: any) => (
+    <a href={href} className={cls} aria-current={tab === id ? "page" : undefined}><span className="ti"><Icon d={icon} />{n > 0 && <b className="badge">{n}</b>}</span>{label}</a>
   );
   return (
     <>
       <main key={ver}>{screen}</main>
-      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare", "raport-beneficiar", "cash"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
+      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare", "raport-beneficiar", "cash", "stocuri"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
       {adding && <AddMenu me={me.data} onClose={() => setAdding(false)} onChanged={(go) => { setAdding(false); if (go) location.hash = go; setVer((n) => n + 1); me.reload(); }} />}
       <nav className="tabs" aria-label="Secțiuni">
         <div className="side-brand"><Brand /><span>Director zonal</span></div>
         <T id="azi" href="#/" icon={I.home} label="Azi" />
         <T id="santiere" href="#/santiere" icon={I.sites} label="Proiecte" />
-        <T id="aprobari" href="#/aprobari" icon={I.check} label="Aprobări" n={badge} />
+        <T id="stocuri" href="#/stocuri" icon={I.box} label="Stocuri" />
+        <T id="aprobari" href="#/aprobari" icon={I.check} label="Aprobări" n={badge} cls="wide-only" />
         <T id="autopilot" href="#/autopilot" icon={I.bolt} label="Autopilot" />
         <T id="mai-mult" href="#/mai-mult" icon={I.more} label="Mai mult" />
         <div className="side-foot"><span className="small muted">{user.name}</span><button className="link" onClick={logout}>Schimbă contul</button></div>

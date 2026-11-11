@@ -83,11 +83,11 @@ export function Echipa() {
         <Err msg={err || msg} />
         <ul className="plain">{(data?.users || []).map((u: any) => (
           <li key={u.id} className="tap" onClick={() => setEdit(u)}><div className="row between"><strong>{u.name}</strong>{u.role !== "director" && <button className="link danger" onClick={async (e) => { e.stopPropagation(); try { await post(`/team/${u.id}/delete`); reload(); } catch (e: any) { setMsg(e.message); } }}>Scoate</button>}</div>
-            <span className="small muted">{u.role === "director" ? "Director zonal" : "Șef de șantier" + (u.site ? " · " + u.site : " · fără proiect")}</span></li>))}</ul>
+            <span className="small muted">{u.role === "director" ? "Director zonal" : u.role === "gestionar" ? "Gestionar · fabrici și depozit" : "Șef de șantier" + (u.site ? " · " + u.site : " · fără proiect")}</span></li>))}</ul>
         <p className="small muted">Atinge un nume ca să-l schimbi sau să muți omul pe alt proiect.</p>
       </div>
       {edit && <Sheet title={edit.role === "director" ? "Numele tău" : "Om din echipă"} fields={[{ key: "name", label: "Nume și prenume" }, ...(edit.role === "director" ? [] : [{ key: "site_id", label: "Proiect", type: "select" as const, options: [["", "Fără proiect"], ...(data?.sites || []).map((s: any) => [s.id, s.name])] as [string, string][] }])]} initial={{ ...edit, site_id: edit.site_id || "" }} onClose={() => setEdit(null)} onSave={async (v) => { await post("/team/" + edit.id, v); reload(); }} />}
-      {sheet && <Sheet title="Om nou în echipă" fields={[{ key: "name", label: "Nume și prenume" }, { key: "site_id", label: "Proiect", type: "select", options: [["", "Fără proiect deocamdată"], ...(data?.sites || []).map((s: any) => [s.id, s.name] as [string, string])] }]} saveLabel="Adaugă" onClose={() => setSheet(false)} onSave={async (v) => { await post("/team", v); reload(); }} />}
+      {sheet && <Sheet title="Om nou în echipă" fields={[{ key: "name", label: "Nume și prenume" }, { key: "role", label: "Rol", type: "select", options: [["sef", "Șef de șantier"], ["gestionar", "Gestionar (fabrici și depozit)"]] }, { key: "site_id", label: "Proiect", type: "select", options: [["", "Fără proiect deocamdată"], ...(data?.sites || []).map((s: any) => [s.id, s.name] as [string, string])] }]} saveLabel="Adaugă" onClose={() => setSheet(false)} onSave={async (v) => { await post("/team", v); reload(); }} />}
     </div>
   );
 }

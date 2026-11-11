@@ -4,8 +4,8 @@ import { exec, run, one, dayOf, addDays } from "./db.js";
 
 // Datele demo se reîmprospătează singure când se schimbă versiunea lor. Odată ce omul a trecut pe datele lui
 // (mode = "own"), aplicația nu mai șterge și nu mai rescrie nimic la actualizări.
-const SEED_VERSION = 8;
-const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "delays", "subs", "sub_log", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
+const SEED_VERSION = 9;
+const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "delays", "subs", "sub_log", "stock_locations", "stock_items", "stock_moves", "stock_suppliers", "stock_orders", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
 const get = (key) => { const r = one("SELECT value FROM settings WHERE key=?", key); return r ? r.value : null; };
 export const mode = () => (get("mode") === '"own"' ? "own" : "demo");
 export function seedIfEmpty() {
@@ -104,6 +104,20 @@ export function seed() {
   K("depozit", null, "Verifică oferta de preț pentru mutarea ușilor de andocare", "Cristian", d(1), "manual:seed1");
 
   /* ----- subcontractori și prezența lor ----- */
+  // fabrici, stație de betoane și depozit: stocuri, furnizori și comenzi fictive
+  user("Dan Mureșan", "gestiune@demo.local", "gestionar", null);
+  const L = (name, kind, place) => Number(run("INSERT INTO stock_locations(name,kind,place) VALUES(?,?,?)", name, kind, place).lastInsertRowid);
+  const F = (name, what, contact, phone, lead) => Number(run("INSERT INTO stock_suppliers(name,what,contact,phone,email,lead_days) VALUES(?,?,?,?,?,?)", name, what, contact, phone, "", lead).lastInsertRowid);
+  const fo = F("Oțel Demo SRL", "Oțel beton, profile laminate, plasă sudată", "Persoană de contact demo", "0700 000 001", 5), fa = F("Agregate Demo SRL", "Agregate sortate", "Persoană de contact demo", "0700 000 002", 2), fc = F("Ciment Demo SA", "Ciment vrac, aditivi", "Persoană de contact demo", "0700 000 003", 3), ff = F("Fixări Demo SRL", "Ancore, elemente de fixare, echipament de protecție", "Persoană de contact demo", "0700 000 004", 4);
+  const it = {}, I = (loc, key, name, unit, qty, min, cost, sup) => { it[key] = Number(run("INSERT INTO stock_items(loc_id,name,unit,qty,min_qty,cost,supplier_id) VALUES(?,?,?,?,?,?,?)", loc, name, unit, qty, min, cost, sup || null).lastInsertRowid); run("INSERT INTO stock_moves(item_id,ts,qty,after,reason,by,ref) VALUES(?,?,?,?,?,?,?)", it[key], at(-6, 8, 0), qty, qty, "Stoc inițial", "Dan Mureșan", ""); };
+  const lp = L("Fabrica de prefabricate", "fabrica", "Sibiu"), lm = L("Fabrica de confecții metalice", "fabrica", "Sibiu"), lb = L("Stația de betoane", "statie", "Sibiu"), ld = L("Depozitul central", "depozit", "Sibiu");
+  I(lp, "stalpi", "Stâlpi prefabricați 60×60", "buc", 42, 20, 6800); I(lp, "grinzi", "Grinzi precomprimate 24 m", "buc", 9, 12, 14500); I(lp, "panouri", "Panouri de fațadă", "buc", 64, 30, 2100); I(lp, "pane", "Pane de acoperiș", "buc", 120, 60, 950);
+  I(lm, "ferme", "Ferme metalice 18 m", "buc", 14, 8, 9200); I(lm, "contrav", "Contravântuiri", "buc", 85, 40, 640); I(lm, "tabla", "Tablă cutată", "mp", 3200, 2500, 42, fo); I(lm, "hea", "Profile laminate HEA", "t", 18, 25, 5200, fo);
+  I(lb, "ciment", "Ciment vrac", "t", 140, 100, 520, fc); I(lb, "ag04", "Agregate 0–4 mm", "t", 620, 400, 68, fa); I(lb, "ag416", "Agregate 4–16 mm", "t", 380, 400, 74, fa); I(lb, "aditivi", "Aditivi", "l", 2400, 1000, 9, fc);
+  I(ld, "otel", "Oțel beton BST500", "t", 46, 30, 4100, fo); I(ld, "cofraje", "Panouri de cofraj", "mp", 900, 400, 160); I(ld, "plasa", "Plasă sudată", "buc", 210, 250, 135, fo); I(ld, "epi", "Echipament de protecție", "set", 75, 50, 280, ff); I(ld, "ancore", "Ancore chimice", "buc", 480, 200, 24, ff);
+  const O = (n, kind, key, qty, site, sup, need, status, by, note) => run("INSERT INTO stock_orders(ts,kind,item_id,qty,site_id,supplier_id,need_by,status,by,note) VALUES(?,?,?,?,?,?,?,?,?,?)", at(n, 9, 30), kind, it[key], qty, site, sup, need, status, by, note);
+  O(-2, "intern", "grinzi", 8, "hala", null, d(2), "confirmata", "Cristian", "Axele C–D"); O(-1, "intern", "panouri", 20, "depozit", null, d(3), "ceruta", "Ioana Dan", "Fațada nord"); O(0, "intern", "otel", 6, "campus", null, d(1), "ceruta", "Radu Stan", "Fundații corp B");
+  O(-1, "furnizor", "ag416", 300, null, fa, d(1), "trimisa", "Dan Mureșan", "Completare stoc");
   const S = (site, name, trade, promised, log) => { const id = Number(run("INSERT INTO subs(site_id,name,trade,promised) VALUES(?,?,?,?)", site, name, trade, promised).lastInsertRowid); log.forEach(([n, present]) => run("INSERT INTO sub_log(sub_id,day,promised,present,note,source_ref) VALUES(?,?,?,?,?,?)", id, d(n), promised, present, "", `seed:${id}:${n}`)); };
   S("campus", "Electro Demo SRL", "Instalații electrice", 8, [[-6, 8], [-5, 7], [-4, 6], [-2, 5]]);
   S("depozit", "Panel Demo SRL", "Montaj panouri fațadă", 6, [[-6, 6], [-5, 6], [-2, 5], [-1, 6]]);

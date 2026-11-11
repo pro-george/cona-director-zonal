@@ -18,6 +18,8 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
   return (
     <Page title="Mai mult" eyebrow={me.user.name}>
       <div className="stack tight grid2">
+        <L href="#/aprobari" t="Aprobări" d="Cererile șefilor de șantier, cu recomandarea Autopilotului" />
+        <L href="#/stocuri" t="Stocuri" d="Fabrici, stație de betoane, depozit, comenzi și furnizori" />
         <L href="#/resurse" t="Resurse" d="Utilaje care stau, oameni pe șantiere, prezența subcontractorilor" />
         <L href="#/cash" t="Prognoză de cash" d="Ce intră și ce iese în următoarele 8 săptămâni" />
         <L href="#/dosare" t="Dosare de întârzieri" d="Zilele pierdute, cu cauze și dovezi, gata de revendicat" />

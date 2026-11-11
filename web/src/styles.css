@@ -450,3 +450,20 @@ a.card { color: inherit; text-decoration: none; }
 .vbar i { display: block; height: 100%; background: var(--ok); opacity: .75; border-radius: 6px; }
 @media (min-width: 1000px) { .rings { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 999px) { .col-main > .rings { order: 5; } .col-side > .week { order: 3; } .col-side > .valrow { order: 6; } .col-side > .ask { order: 7; } .content.azi > .foot { order: 8; } }
+
+/* stocuri */
+@media (max-width: 999px) { nav.tabs a.wide-only { display: none; } }
+button.tile { font: inherit; cursor: pointer; }
+.tile b.sm { font-size: 17px; line-height: 1.6; }
+.card.loc { gap: 12px; }
+.lochead { all: unset; display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; width: 100%; box-sizing: border-box; }
+.lochead:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 6px; }
+.lochead > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lv-strip { display: flex; gap: 4px; }
+.lv-strip i { flex: 1; height: 8px; border-radius: 4px; display: block; }
+.lv-ok { background: var(--ok); opacity: .7; } .lv-warn { background: var(--warn); opacity: .7; } .lv-crit { background: var(--crit); opacity: .8; } .lv-res { background: var(--none); opacity: .35; }
+.lvbar { position: relative; display: flex; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: visible; margin: 2px 0; }
+.lvbar i { display: block; height: 100%; } .lvbar i:first-child { border-radius: 4px 0 0 4px; }
+.lvbar u { position: absolute; top: -3px; width: 2px; height: 14px; background: var(--ink); opacity: .55; }
+ul.stock .unit { font-weight: 400; color: var(--muted); font-size: 13px; }
+ul.stock li { gap: 4px; }

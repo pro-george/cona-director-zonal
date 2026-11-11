@@ -8,6 +8,7 @@ export const Icon = ({ d, size = 22 }: { d: string; size?: number }) => (
 );
 export const I = {
   home: "M4 11.5 12 5l8 6.5V20h-5v-5H9v5H4z",
+  box: "M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8",
   sites: "M3 20h18M5 20V9l7-4 7 4v11M9 20v-5h6v5",
   check: "M5 12.5l4.5 4.5L19 7.5",
   bolt: "M13 3 5 13.5h6L10 21l9-11.5h-6z",

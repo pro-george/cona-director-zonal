@@ -70,7 +70,7 @@ export async function updateProject(id, body) {
 }
 export function deleteProject(id) {
   for (const t of ["reports", "tasks", "drafts", "replans", "delays", "meetings", "erp_budget", "erp_receivables", "erp_approvals", "erp_equipment", "bim_elements", "bim_deliveries"]) run(`DELETE FROM ${t} WHERE site_id=?`, id);
-  for (const b of q("SELECT id FROM subs WHERE site_id=?", id)) run("DELETE FROM sub_log WHERE sub_id=?", b.id); run("DELETE FROM subs WHERE site_id=?", id);
+  for (const b of q("SELECT id FROM subs WHERE site_id=?", id)) run("DELETE FROM sub_log WHERE sub_id=?", b.id); run("DELETE FROM subs WHERE site_id=?", id); run("UPDATE stock_orders SET status='anulata' WHERE site_id=? AND status IN ('ceruta','confirmata')", id);
   run("DELETE FROM weather_cache WHERE site_id=?", id); run("UPDATE users SET site_id=NULL WHERE site_id=?", id); run("DELETE FROM sites WHERE id=?", id);
 }
 
@@ -103,8 +103,8 @@ export function createApproval(siteId, body, user) {
 }
 export function createUser(body) {
   const name = str(body.name); if (!name) throw new Invalid("Scrie numele.");
-  const id = Number(run("INSERT INTO users(name,email,role,pass,site_id) VALUES(?,?,?,?,?)", name, "u" + Date.now() + "@demo.local", "sef", "", body.site_id || null).lastInsertRowid);
-  if (body.site_id) run("UPDATE sites SET manager_id=? WHERE id=?", id, body.site_id);
+  const id = Number(run("INSERT INTO users(name,email,role,pass,site_id) VALUES(?,?,?,?,?)", name, "u" + Date.now() + "@demo.local", body.role === "gestionar" ? "gestionar" : "sef", "", body.role === "gestionar" ? null : body.site_id || null).lastInsertRowid);
+  if (body.site_id && body.role !== "gestionar") run("UPDATE sites SET manager_id=? WHERE id=?", id, body.site_id);
   return id;
 }
 export function removeUser(id) { run("UPDATE sites SET manager_id=NULL WHERE manager_id=?", Number(id)); run("DELETE FROM users WHERE id=? AND role!='director'", Number(id)); }

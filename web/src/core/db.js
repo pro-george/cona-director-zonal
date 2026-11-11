@@ -33,6 +33,11 @@ CREATE TABLE IF NOT EXISTS erp_approvals (id INTEGER PRIMARY KEY, site_id TEXT, 
 CREATE TABLE IF NOT EXISTS erp_equipment (id INTEGER PRIMARY KEY, site_id TEXT, name TEXT, daily_cost REAL, status TEXT);
 CREATE TABLE IF NOT EXISTS replans (id INTEGER PRIMARY KEY, ts INTEGER, site_id TEXT, sig TEXT, data TEXT, status TEXT, decided_at INTEGER, decided_by TEXT);
 CREATE TABLE IF NOT EXISTS delays (id INTEGER PRIMARY KEY, site_id TEXT, day TEXT, cause TEXT, title TEXT, detail TEXT, evidence TEXT, source_ref TEXT, days REAL, status TEXT, notified_at INTEGER);
+CREATE TABLE IF NOT EXISTS stock_locations (id INTEGER PRIMARY KEY, name TEXT, kind TEXT, place TEXT);
+CREATE TABLE IF NOT EXISTS stock_items (id INTEGER PRIMARY KEY, loc_id INTEGER, name TEXT, unit TEXT, qty REAL, min_qty REAL, cost REAL, supplier_id INTEGER);
+CREATE TABLE IF NOT EXISTS stock_moves (id INTEGER PRIMARY KEY, item_id INTEGER, ts INTEGER, qty REAL, after REAL, reason TEXT, by TEXT, ref TEXT);
+CREATE TABLE IF NOT EXISTS stock_suppliers (id INTEGER PRIMARY KEY, name TEXT, what TEXT, contact TEXT, phone TEXT, email TEXT, lead_days INTEGER);
+CREATE TABLE IF NOT EXISTS stock_orders (id INTEGER PRIMARY KEY, ts INTEGER, kind TEXT, item_id INTEGER, qty REAL, site_id TEXT, supplier_id INTEGER, need_by TEXT, status TEXT, by TEXT, note TEXT, decided_by TEXT, decided_at INTEGER);
 CREATE TABLE IF NOT EXISTS subs (id INTEGER PRIMARY KEY, site_id TEXT, name TEXT, trade TEXT, promised INTEGER);
 CREATE TABLE IF NOT EXISTS sub_log (id INTEGER PRIMARY KEY, sub_id INTEGER, day TEXT, promised INTEGER, present INTEGER, note TEXT, source_ref TEXT);
 -- BIM simulat

@@ -1,5 +1,6 @@
 // Autopilot: automatizările care rulează singure (la oră fixă, din oră în oră sau la un eveniment)
 // și jurnalul cu tot ce au făcut. Fiecare acțiune notează minutele pe care le-ar fi luat făcută de mână.
+import * as stock from "./stock.js";
 import { q, one, run, dayOf, hm, addDays, dow, lei, setting } from "./db.js";
 import * as erp from "./connectors/erp.js";
 import * as bim from "./connectors/bim.js";
@@ -23,6 +24,7 @@ export const DEFS = [
   { key: "deliveries", name: "Supraveghere livrări din fabrică", desc: "Compară livrările din BIM cu graficul; la întârziere deschide o sarcină și pregătește mesajul către fabrică.", schedule: { type: "hourly" }, when: "Din oră în oră" },
   { key: "cash", name: "Urmărire încasări", desc: "Găsește situațiile de lucrări cu scadența depășită și pregătește notificarea de plată.", schedule: { type: "daily", at: "09:00" }, when: "Zilnic, 09:00" },
   { key: "weekly", name: "Raport săptămânal către conducere", desc: "Scrie ciorna raportului din rapoartele zilei, ERP și BIM.", schedule: { type: "weekly", dow: 5, at: "14:00" }, when: "Vinerea, 14:00" },
+  { key: "stock", name: "Completare de stoc", desc: "Urmărește stocurile din fabrici și din depozit. Când un articol scade sub minim, pregătește comanda către furnizorul lui și ți-o propune.", schedule: { type: "hourly" }, when: "Din oră în oră" },
   { key: "clientreports", name: "Raport săptămânal către beneficiari", desc: "Scrie pentru fiecare proiect ciorna raportului către beneficiar: stadiu, ce s-a executat, ce urmează și ce decizii se așteaptă de la el.", schedule: { type: "weekly", dow: 5, at: "13:00" }, when: "Vinerea, 13:00" },
   { key: "minutes", name: "Minute de ședință", desc: "Din dictare sau notițe scoate rezumatul, deciziile și sarcinile cu responsabili.", schedule: { type: "event" }, when: "La fiecare ședință" },
 ];
@@ -46,6 +48,11 @@ async function addDraft(kind, ref, site, recipient, title, facts) {
 }
 
 const RUN = {
+  async stock() {
+    const made = stock.autopropose();
+    for (const m of made) log("stock", `Am pregătit comanda: ${m.qty} ${m.unit} ${m.item}`, `${m.loc} · ${m.supplier}`, null, 15);
+    return made.length;
+  },
   async clientreports() {
     let n = 0;
     for (const s of sitesAll()) if (await clientreport.generate(s.id)) { log("clientreports", `Am scris raportul către beneficiar pentru ${s.name}`, s.client || "", s.id, 45); n++; }
@@ -192,5 +199,5 @@ export async function bootstrap() {
   if (one("SELECT COUNT(*) n FROM automation_log").n > 0) return;
   for (const r of q("SELECT id FROM reports WHERE day=? ORDER BY ts", dayOf())) await onReport(r.id, false);
   resources.detectSubs(dayOf());
-  for (const k of ["weather", "replan", "delays", "precheck", "autoapprove", "deliveries", "cash", "brief"]) await runNow(k);
+  for (const k of ["weather", "replan", "delays", "precheck", "autoapprove", "deliveries", "cash", "stock", "brief"]) await runNow(k);
 }

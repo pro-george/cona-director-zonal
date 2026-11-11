@@ -18,9 +18,11 @@ import * as delays from "./delays.js";
 import * as resources from "./resources.js";
 import * as cash from "./cash.js";
 import * as clientreport from "./clientreport.js";
+import * as stock from "./stock.js";
 import { useDeadlines } from "./data.js";
-useDeadlines((today) => [...delays.deadlineAlerts(today), ...resources.alertsFor(today)]);
+useDeadlines((today) => [...delays.deadlineAlerts(today), ...resources.alertsFor(today), ...stock.alertsFor(today)]);
 
+const store = (user) => { if (!["director", "gestionar"].includes(user.role)) fail(403, "Doar directorul și gestionarul au acces la stocuri."); };
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
 
@@ -162,6 +164,16 @@ const ROUTES = [
   ["POST", "subs/:id/delete", { director: true }, ({ params }) => { resources.removeSub(params.id); return { ok: true }; }],
   ["POST", "subs/:id/log", { director: true }, ({ params, body }) => { resources.logSub(params.id, body) || fail(404, "Subcontractorul nu există."); return { ok: true }; }],
   ["GET", "cash", { director: true }, () => cash.forecast()],
+  ["GET", "stock", {}, ({ user }) => { store(user); return { ...stock.overview(), role: user.role }; }],
+  ["POST", "stock/locations", {}, ({ user, body }) => { store(user); const bad = stock.saveLocation(body); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/locations/:id/delete", {}, ({ user, params }) => { store(user); const bad = stock.removeLocation(params.id); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/items", {}, ({ user, body }) => { store(user); const bad = stock.saveItem(body, user.name); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/items/:id/delete", {}, ({ user, params }) => { store(user); const bad = stock.removeItem(params.id); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/items/:id/move", {}, ({ user, params, body }) => { store(user); const bad = stock.move(params.id, body, user.name); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/suppliers", {}, ({ user, body }) => { store(user); const bad = stock.saveSupplier(body); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/suppliers/:id/delete", {}, ({ user, params }) => { store(user); const bad = stock.removeSupplier(params.id); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/orders", {}, ({ user, body }) => { store(user); const bad = stock.placeOrder(body, user.name); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "stock/orders/:id", {}, ({ user, params, body }) => { store(user); const bad = stock.act(params.id, body.action, user.name); if (bad) fail(400, bad); return { ok: true }; }],
   ["POST", "sites/:id/client-report", { director: true }, async ({ params }) => (await clientreport.generate(params.id)) || fail(404, "Proiectul nu există.")],
 
   ["GET", "weather", { director: true }, () => {
