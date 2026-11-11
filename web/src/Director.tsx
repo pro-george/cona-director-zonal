@@ -173,7 +173,7 @@ export function Santier({ id }: { id: string }) {
         <H>Utilaje închiriate</H>
         {equipment.length ? <ul className="plain">{equipment.map((e: any) => <li key={e.id} className="tap" onClick={() => row("equipment", "Utilaj", F.equipment, e)}><div className="row between"><strong>{e.name}</strong><span className={"pill " + (e.status === "in_asteptare" ? "s-critic" : "s-ok")}>{e.status === "in_asteptare" ? "În așteptare" : "Lucrează"}</span></div><span className="small muted">{lei(e.daily_cost)} pe zi</span></li>)}</ul> : <Empty>Niciun utilaj trecut.</Empty>}
         <Add on={() => row("equipment", "Utilaj nou", F.equipment, undefined, { status: "activ" })}>Utilaj</Add>
-        <a className="btn ghost" href="#/raport" style={{ textAlign: "center" }}>Trimite un raport de șantier</a>
+        <div className="row two"><a className="btn ghost" href="#/raport" style={{ textAlign: "center" }}>Raport de șantier</a><a className="btn ghost" href={"#/raport-beneficiar/" + id} style={{ textAlign: "center" }}>Raport către beneficiar</a></div>
         <H>Șeful de șantier</H>
         <Card>
           <p>{site.manager ? <><strong>{site.manager}</strong> trimite rapoartele și cererile de pe telefonul lui.</> : "Proiectul nu are încă un șef de șantier ales."}</p>

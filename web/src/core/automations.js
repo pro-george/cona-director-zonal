@@ -8,6 +8,8 @@ import { sitesAll, siteById, zoneContext, latestReports, reportRow } from "./dat
 import { makeBrief, mgmtReport, draftLetter } from "./ai.js";
 import * as replan from "./replan.js";
 import * as delays from "./delays.js";
+import * as resources from "./resources.js";
+import * as clientreport from "./clientreport.js";
 
 export const DEFS = [
   { key: "brief", name: "Briefing de dimineață", desc: "Citește rapoartele de șantier, ERP-ul și BIM-ul și scrie rezumatul zilei, cu deciziile care te așteaptă.", schedule: { type: "daily", at: "06:45" }, when: "Zilnic, 06:45" },
@@ -21,6 +23,7 @@ export const DEFS = [
   { key: "deliveries", name: "Supraveghere livrări din fabrică", desc: "Compară livrările din BIM cu graficul; la întârziere deschide o sarcină și pregătește mesajul către fabrică.", schedule: { type: "hourly" }, when: "Din oră în oră" },
   { key: "cash", name: "Urmărire încasări", desc: "Găsește situațiile de lucrări cu scadența depășită și pregătește notificarea de plată.", schedule: { type: "daily", at: "09:00" }, when: "Zilnic, 09:00" },
   { key: "weekly", name: "Raport săptămânal către conducere", desc: "Scrie ciorna raportului din rapoartele zilei, ERP și BIM.", schedule: { type: "weekly", dow: 5, at: "14:00" }, when: "Vinerea, 14:00" },
+  { key: "clientreports", name: "Raport săptămânal către beneficiari", desc: "Scrie pentru fiecare proiect ciorna raportului către beneficiar: stadiu, ce s-a executat, ce urmează și ce decizii se așteaptă de la el.", schedule: { type: "weekly", dow: 5, at: "13:00" }, when: "Vinerea, 13:00" },
   { key: "minutes", name: "Minute de ședință", desc: "Din dictare sau notițe scoate rezumatul, deciziile și sarcinile cu responsabili.", schedule: { type: "event" }, when: "La fiecare ședință" },
 ];
 
@@ -43,6 +46,11 @@ async function addDraft(kind, ref, site, recipient, title, facts) {
 }
 
 const RUN = {
+  async clientreports() {
+    let n = 0;
+    for (const s of sitesAll()) if (await clientreport.generate(s.id)) { log("clientreports", `Am scris raportul către beneficiar pentru ${s.name}`, s.client || "", s.id, 45); n++; }
+    return n ? `${n} ciorne pregătite` : "Niciun proiect";
+  },
   async delays() {
     const n = delays.detect(dayOf());
     if (n) log("delays", `Am trecut ${n} ${n === 1 ? "întârziere nouă" : "întârzieri noi"} în dosare`, "Cu cauza și dovezile fiecăreia.", null, n * 10);
@@ -145,6 +153,7 @@ export async function onReport(reportId, rebrief = true) {
   run("UPDATE automations SET last_run=?, last_result=? WHERE key='triage'", Date.now(), `${tasks} sarcini, ${drafts} adrese`);
   log("triage", `Am procesat raportul de la ${s.name}`, `Status: ${r.status}. ${tasks} sarcini deschise${drafts ? ", o adresă către beneficiar pregătită" : ""}.`, s.id, 8 + drafts * 15);
   if (enabled("delays")) delays.detect(dayOf());
+  resources.detectSubs(dayOf());
   if (rebrief && r.status === "critic" && enabled("brief")) await RUN.brief().catch(() => {});
 }
 
@@ -182,5 +191,6 @@ export async function bootstrap() {
   ensure();
   if (one("SELECT COUNT(*) n FROM automation_log").n > 0) return;
   for (const r of q("SELECT id FROM reports WHERE day=? ORDER BY ts", dayOf())) await onReport(r.id, false);
+  resources.detectSubs(dayOf());
   for (const k of ["weather", "replan", "delays", "precheck", "autoapprove", "deliveries", "cash", "brief"]) await runNow(k);
 }

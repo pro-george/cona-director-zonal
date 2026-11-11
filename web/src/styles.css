@@ -407,3 +407,12 @@ a.foot.link { align-self: center; text-align: center; }
 .timeline { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .timeline li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
 .evid { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+
+/* resurse și cash */
+.att { display: flex; align-items: flex-end; gap: 4px; height: 34px; }
+.att i { width: 14px; border-radius: 3px 3px 0 0; display: block; }
+.a-ok { background: var(--ok); } .a-warn { background: var(--warn); } .a-crit { background: var(--crit); }
+.b-in { fill: var(--ok); opacity: .75; } .b-out { fill: var(--none); opacity: .6; }
+.k-in { border-top: 6px solid var(--ok); opacity: .75; width: 10px; } .k-out { border-top: 6px solid var(--none); opacity: .6; width: 10px; }
+ul.sub { list-style: none; padding: 6px 0 0 !important; display: flex; flex-direction: column; gap: 4px; color: var(--muted); }
+.apstats b { font-size: 22px; }

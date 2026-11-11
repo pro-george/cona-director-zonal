@@ -4,8 +4,8 @@ import { exec, run, one, dayOf, addDays } from "./db.js";
 
 // Datele demo se reîmprospătează singure când se schimbă versiunea lor. Odată ce omul a trecut pe datele lui
 // (mode = "own"), aplicația nu mai șterge și nu mai rescrie nimic la actualizări.
-const SEED_VERSION = 7;
-const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "delays", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
+const SEED_VERSION = 8;
+const TABLES = ["users", "sessions", "sites", "reports", "briefs", "mgmt_reports", "meetings", "tasks", "drafts", "notifications", "automations", "automation_log", "settings", "weather_cache", "replans", "delays", "subs", "sub_log", "erp_equipment", "erp_budget", "erp_receivables", "erp_approvals", "bim_elements", "bim_deliveries"];
 const get = (key) => { const r = one("SELECT value FROM settings WHERE key=?", key); return r ? r.value : null; };
 export const mode = () => (get("mode") === '"own"' ? "own" : "demo");
 export function seedIfEmpty() {
@@ -102,6 +102,13 @@ export function seed() {
   K("fabrica", mid, "Trimite beneficiarului graficul actualizat", "Mihai Rusu", d(-2), "meeting:" + mid);
   K("fabrica", mid, "Predă dirigintelui buletinele de încercări pentru beton", "Mihai Rusu", d(1), "meeting:" + mid + ":b");
   K("depozit", null, "Verifică oferta de preț pentru mutarea ușilor de andocare", "Cristian", d(1), "manual:seed1");
+
+  /* ----- subcontractori și prezența lor ----- */
+  const S = (site, name, trade, promised, log) => { const id = Number(run("INSERT INTO subs(site_id,name,trade,promised) VALUES(?,?,?,?)", site, name, trade, promised).lastInsertRowid); log.forEach(([n, present]) => run("INSERT INTO sub_log(sub_id,day,promised,present,note,source_ref) VALUES(?,?,?,?,?,?)", id, d(n), promised, present, "", `seed:${id}:${n}`)); };
+  S("campus", "Electro Demo SRL", "Instalații electrice", 8, [[-6, 8], [-5, 7], [-4, 6], [-2, 5]]);
+  S("depozit", "Panel Demo SRL", "Montaj panouri fațadă", 6, [[-6, 6], [-5, 6], [-2, 5], [-1, 6]]);
+  S("hala", "Macarale Demo SRL", "Macarale și montaj", 4, [[-5, 4], [-2, 4], [-1, 4]]);
+  run("UPDATE erp_equipment SET idle_since=? WHERE status='in_asteptare'", d(-1));
 
   /* ----- întârzieri mai vechi, ca dosarul să aibă istoric ----- */
   const Y = (s, n, cause, title, days, type, txt) => run("INSERT INTO delays(site_id,day,cause,title,detail,evidence,source_ref,days,status) VALUES(?,?,?,?,?,?,?,?,'deschis')", s, d(n), cause, title, "", JSON.stringify([{ type, ref: "seed", text: txt }]), `auto:${s}:${d(n)}:${cause}`, days);

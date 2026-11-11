@@ -6,6 +6,7 @@ import { Aprobari, Autopilot, Replanificari, Valoare } from "./Work";
 import { ImportProiect } from "./Import";
 import { AddMenu, Echipa, Invitatie, Primit } from "./Edit";
 import { Dosare, Dosar } from "./Dosar";
+import { Resurse, Cash, RaportBeneficiar } from "./Resurse";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
@@ -53,7 +54,7 @@ export default function App() {
   if (user.role !== "director") return <SefHome me={me.data} route={route} logout={logout} />;
 
   const [page, arg] = route;
-  const tab = ["santiere", "santier", "import", "dosar"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa", "dosare"].includes(page) ? "mai-mult" : "azi";
+  const tab = ["santiere", "santier", "import", "dosar", "raport-beneficiar"].includes(page) ? "santiere" : ["aprobari"].includes(page) ? "aprobari" : page === "autopilot" ? "autopilot" : ["mai-mult", "sedinte", "sarcini", "conducere", "intreaba", "raport", "echipa", "dosare", "resurse", "cash"].includes(page) ? "mai-mult" : "azi";
   let screen;
   switch (page) {
     case "alerte": screen = <Alerte />; break;
@@ -63,6 +64,9 @@ export default function App() {
     case "valoare": screen = <Valoare />; break;
     case "echipa": screen = <Echipa />; break;
     case "dosare": screen = <Dosare />; break;
+    case "resurse": screen = <Resurse />; break;
+    case "cash": screen = <Cash />; break;
+    case "raport-beneficiar": screen = <RaportBeneficiar id={arg} />; break;
     case "dosar": screen = <Dosar id={arg} />; break;
     case "santiere": screen = <Santiere />; break;
     case "santier": screen = <Santier id={arg} />; break;
@@ -82,7 +86,7 @@ export default function App() {
   return (
     <>
       <main key={ver}>{screen}</main>
-      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
+      {!["intreaba", "raport", "sedinte", "import", "dosar", "valoare", "raport-beneficiar", "cash"].includes(page) && <button className="fab" onClick={() => setAdding(true)} aria-label="Adaugă"><Icon d={I.plus} size={24} /><span>Adaugă</span></button>}
       {adding && <AddMenu me={me.data} onClose={() => setAdding(false)} onChanged={(go) => { setAdding(false); if (go) location.hash = go; setVer((n) => n + 1); me.reload(); }} />}
       <nav className="tabs" aria-label="Secțiuni">
         <div className="side-brand"><Brand /><span>Director zonal</span></div>

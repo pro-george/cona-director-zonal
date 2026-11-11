@@ -70,6 +70,7 @@ export async function updateProject(id, body) {
 }
 export function deleteProject(id) {
   for (const t of ["reports", "tasks", "drafts", "replans", "delays", "meetings", "erp_budget", "erp_receivables", "erp_approvals", "erp_equipment", "bim_elements", "bim_deliveries"]) run(`DELETE FROM ${t} WHERE site_id=?`, id);
+  for (const b of q("SELECT id FROM subs WHERE site_id=?", id)) run("DELETE FROM sub_log WHERE sub_id=?", b.id); run("DELETE FROM subs WHERE site_id=?", id);
   run("DELETE FROM weather_cache WHERE site_id=?", id); run("UPDATE users SET site_id=NULL WHERE site_id=?", id); run("DELETE FROM sites WHERE id=?", id);
 }
 

@@ -15,8 +15,11 @@ import * as commands from "./commands.js";
 import * as crud from "./crud.js";
 import * as share from "./share.js";
 import * as delays from "./delays.js";
+import * as resources from "./resources.js";
+import * as cash from "./cash.js";
+import * as clientreport from "./clientreport.js";
 import { useDeadlines } from "./data.js";
-useDeadlines(delays.deadlineAlerts);
+useDeadlines((today) => [...delays.deadlineAlerts(today), ...resources.alertsFor(today)]);
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -134,9 +137,9 @@ const ROUTES = [
   ["POST", "sites/:id/zones", { director: true }, ({ params, body }) => { body.old ? crud.updateZone(params.id, String(body.old), body) : crud.createZone(params.id, body); replan.generate(); return { ok: true }; }],
   ["POST", "sites/:id/zones/delete", { director: true }, ({ params, body }) => { crud.deleteZone(params.id, String(body.zone)); replan.generate(); return { ok: true }; }],
   ["POST", "sites/:id/approvals", {}, async ({ user, params, body }) => { if (user.role !== "director" && user.site_id !== params.id) fail(403, "Poți cere aprobări doar pentru șantierul tău."); const id = crud.createApproval(params.id, body, user); await auto.runNow("precheck"); return { id }; }],
-  ["POST", "sites/:id/rows/:entity", { director: true }, ({ params, body }) => { const id = crud.create(params.entity, params.id, body); replan.generate(); return { id }; }],
+  ["POST", "sites/:id/rows/:entity", { director: true }, ({ params, body }) => { const id = crud.create(params.entity, params.id, body); resources.normalize(); replan.generate(); return { id }; }],
   ["POST", "rows/:entity", { director: true }, ({ params, body }) => ({ id: crud.create(params.entity, body.site_id || null, body) })],
-  ["POST", "rows/:entity/:id", { director: true }, ({ params, body }) => { crud.update(params.entity, params.id, body); replan.generate(); return { ok: true }; }],
+  ["POST", "rows/:entity/:id", { director: true }, ({ params, body }) => { crud.update(params.entity, params.id, body); resources.normalize(); replan.generate(); return { ok: true }; }],
   ["POST", "rows/:entity/:id/delete", { director: true }, ({ params }) => { crud.remove(params.entity, params.id); replan.generate(); return { ok: true }; }],
   ["GET", "team", { director: true }, () => ({ users: q("SELECT u.id,u.name,u.role,u.site_id,s.name AS site FROM users u LEFT JOIN sites s ON s.id=u.site_id ORDER BY u.id"), sites: sitesAll().map((s) => ({ id: s.id, name: s.name })) })],
   ["POST", "team", { director: true }, ({ body }) => ({ id: crud.createUser(body) })],
@@ -148,6 +151,16 @@ const ROUTES = [
   ["POST", "delays/:site", { director: true }, ({ params, body }) => { if ("noticeDays" in body) { delays.setNotice(params.site, body.noticeDays); return { ok: true }; } const bad = delays.save(params.site, body.id, body); if (bad) fail(400, bad); return { ok: true }; }],
   ["POST", "delays/:site/:id", { director: true }, ({ params, body }) => { body.delete ? delays.remove(params.id) : delays.setStatus(params.id, body.status); return { ok: true }; }],
   ["GET", "delays/:site/dossier", { director: true }, ({ params }) => ({ text: delays.dossierText(params.site) })],
+
+  /* ----- resurse, cash și raport către beneficiar ----- */
+  ["GET", "resources", { director: true }, () => ({ equipment: resources.equipment(), people: resources.people(), subs: resources.subs(), sites: sitesAll().map((s) => ({ id: s.id, name: s.name })), laborDay: value.params().laborDay })],
+  ["POST", "equipment/:id/move", { director: true }, ({ params, body }) => { resources.moveEquipment(params.id, String(body.site_id)) || fail(400, "Alege proiectul."); auto.log("resources", "Utilaj mutat pe alt proiect", "", String(body.site_id), 10); return { ok: true }; }],
+  ["POST", "equipment/:id/release", { director: true }, ({ params }) => { resources.releaseEquipment(params.id); return { ok: true }; }],
+  ["POST", "subs", { director: true }, ({ body }) => { const bad = resources.saveSub(body); if (bad) fail(400, bad); return { ok: true }; }],
+  ["POST", "subs/:id/delete", { director: true }, ({ params }) => { resources.removeSub(params.id); return { ok: true }; }],
+  ["POST", "subs/:id/log", { director: true }, ({ params, body }) => { resources.logSub(params.id, body) || fail(404, "Subcontractorul nu există."); return { ok: true }; }],
+  ["GET", "cash", { director: true }, () => cash.forecast()],
+  ["POST", "sites/:id/client-report", { director: true }, async ({ params }) => (await clientreport.generate(params.id)) || fail(404, "Proiectul nu există.")],
 
   ["GET", "weather", { director: true }, () => {
     const today = dayOf(), open = replan.list().filter((r) => r.status === "proposed");

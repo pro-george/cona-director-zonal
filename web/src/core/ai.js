@@ -34,6 +34,8 @@ async function llm(prompt, { images = [], max = 1200 } = {}) {
     return null;
   }
 }
+// Text liber de la model, pentru module din afara acestui fișier; null când nu există cheie sau cererea eșuează.
+export const aiText = (prompt, max = 800) => llm(prompt, { max });
 async function llmJSON(prompt, opts) {
   const t = await llm(prompt + "\n\nRăspunde DOAR cu obiectul JSON.", opts);
   if (!t) return null;

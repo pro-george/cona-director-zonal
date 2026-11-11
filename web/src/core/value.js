@@ -3,13 +3,16 @@
 import { q, one, J, setting, setSetting, lei } from "./db.js";
 
 // IPOTEZE implicite, nu cifre ale firmei. Se înlocuiesc din ecranul Valoare cu cele reale.
-export const DEFAULTS = { orgDay: 6000, penaltyDay: 0, moneyRate: 8, gainDays: 7, hourCost: 150 };
+export const DEFAULTS = { orgDay: 6000, penaltyDay: 0, moneyRate: 8, gainDays: 7, hourCost: 150, laborDay: 350, payDelay: 10, spendWeeks: 6 };
 export const FIELDS = [
   { key: "orgDay", label: "Cost zilnic de organizare a unui șantier", unit: "lei/zi", max: 1e6 },
   { key: "penaltyDay", label: "Penalitate de întârziere din contract", unit: "lei/zi", max: 1e7 },
   { key: "moneyRate", label: "Costul banilor (credit sau numerar propriu)", unit: "% pe an", max: 50 },
   { key: "gainDays", label: "Zile câștigate la încasare printr-o notificare promptă", unit: "zile", max: 120 },
   { key: "hourCost", label: "Costul unei ore a directorului zonal", unit: "lei/oră", max: 5000 },
+  { key: "laborDay", label: "Costul unui muncitor pe zi", unit: "lei/zi", max: 5000 },
+  { key: "payDelay", label: "Întârzierea obișnuită a beneficiarilor la plată", unit: "zile peste scadență", max: 180 },
+  { key: "spendWeeks", label: "În câte săptămâni se plătesc sumele angajate", unit: "săptămâni", max: 8 },
 ];
 export const params = () => ({ ...DEFAULTS, ...setting("value_params", {}) });
 export function saveParams(input) {
