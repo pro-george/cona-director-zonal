@@ -77,7 +77,9 @@ const ROUTES = [
     const today = dayOf(), reports = latestReports(today), b = one("SELECT * FROM briefs WHERE day=?", today);
     return {
       today, brief: b ? { ...J(b.data, {}), ts: b.ts } : null, stats: auto.stats(today), alerts: alerts(today), value: (() => { const v = value.compute(); return { realized: v.realized, potential: v.potential }; })(),
-      weather: (() => { const list = sitesAll().map((s) => wx.riskDays(s.id, today)); return { sites: list.filter((n) => n > 0).length, days: list.reduce((a, n) => a + n, 0) }; })(),
+      weather: (() => { const all = sitesAll(), list = all.map((s) => wx.riskDays(s.id, today)), by = all.map((s) => wx.risksByDay(s.id, today));
+        const week = Array.from({ length: 7 }, (_, i) => { const day = addDays(today, i), hit = by.map((l) => l.find((r) => r.day === day)).filter(Boolean); return { day, sites: hit.length, sev: hit.some((r) => r.sev === "crit") ? "crit" : hit.length ? "warn" : "ok" }; });
+        return { sites: list.filter((n) => n > 0).length, days: list.reduce((a, n) => a + n, 0), week }; })(),
       waiting: { approvals: erp.approvals("pending").length, drafts: one("SELECT COUNT(*) n FROM drafts WHERE status='draft'").n, overdue: one("SELECT COUNT(*) n FROM tasks WHERE status='open' AND due<?", today).n, replans: replan.openCount(), open: one("SELECT COUNT(*) n FROM tasks WHERE status='open'").n },
       sites: sitesAll().map((s) => { const r = reports[s.id], p = bim.physical(s.id, today), f = erp.financeSummary(s, today);
         return { id: s.id, name: s.name, location: s.location, manager: s.manager, status: r ? r.status : "none", summary: r?.summary || "", workers: r?.workers ?? null, reportDay: r?.day || null, realPct: p.realPct, planPct: p.planPct, spentPct: f.spentPct, forecast: (() => { const x = bim.forecast(s, today); return x ? { date: x.date, vsDeadline: x.vsDeadline } : null; })(), wx: wx.forecast(s.id).days.find((d) => d.day === today) || null, riskDays: wx.riskDays(s.id, today) }; }),

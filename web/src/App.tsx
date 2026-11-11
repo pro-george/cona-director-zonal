@@ -5,6 +5,8 @@ import { Azi, Alerte, Meteo, Santiere, Santier } from "./Director";
 import { Aprobari, Autopilot, Replanificari, Valoare } from "./Work";
 import { ImportProiect } from "./Import";
 import { AddMenu, Echipa, Invitatie, Primit } from "./Edit";
+declare const __HAS_LOGO__: boolean;
+const HAS_LOGO = __HAS_LOGO__;
 import { Dosare, Dosar } from "./Dosar";
 import { Resurse, Cash, RaportBeneficiar } from "./Resurse";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
@@ -35,7 +37,7 @@ function Login({ onDone }: { onDone: () => void }) {
 
 export function Brand() {
   const [ok, setOk] = useState(true);
-  return ok ? <img className="logo" src="./brand/logo.svg" alt="" onError={() => setOk(false)} /> : <span className="logo-fallback" aria-hidden="true" />;
+  return ok && HAS_LOGO ? <img className="logo" src="./brand/logo.svg" alt="" onError={() => setOk(false)} /> : <span className="logo-fallback" aria-hidden="true" />;
 }
 
 export default function App() {

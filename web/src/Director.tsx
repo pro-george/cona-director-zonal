@@ -56,7 +56,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
         <div className="hero-brand"><Brand /><span>Director zonal</span><button className="link switch-acc" onClick={logout}>Schimbă contul</button></div>
         <p className="eyebrow">{dayLong(data.today)}</p>
         <h1>{hello}, {me.user.name.split(" ")[0]}</h1>
-        {data.sites.length > 0 && <p className="state">{data.sites.length} {data.sites.length === 1 ? "proiect" : "proiecte"}: {state}</p>}
+        {data.sites.length > 0 && <p className="state dots" aria-label={state}>{([["critic", "crit", "blocaj"], ["atentie", "warn", "de urmărit"], ["ok", "ok", "în grafic"], ["none", "none", "fără raport"]] as string[][]).filter(([k]) => count(k)).map(([k, c, t]) => <span key={k}><i className={"d-" + c} />{count(k)} {t}</span>)}</p>}
       </header>
       {data.sites.length === 0 ? <div className="content"><Card className="brief">
         <p className="headline">Începe cu primul proiect</p>
@@ -65,37 +65,47 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
       </Card></div> :
       <div className="content azi">
         <div className="col-main">
-        <Card className="brief">
-          <div className="row between"><span className="label">Briefingul zilei</span>{b && <Auto>Autopilot · {time(b.ts)}</Auto>}</div>
+        <Card className="brief slim">
+          <div className="row between"><span className="label">Briefingul zilei</span>{b && <Auto>{time(b.ts)}</Auto>}</div>
           {b ? <>
             <p className="headline">{b.headline}</p>
-            <p className="muted">{b.summary}</p>
-            {decisions.length > 0 && <><span className="label">De decis azi</span><ol className="num">{(more ? decisions : decisions.slice(0, 3)).map((d: string, i: number) => <li key={i}>{d}</li>)}</ol></>}
-            <div className="row between">
-              {decisions.length > 3 ? <button className="link" onClick={() => setMore(!more)}>{more ? "Arată mai puține" : `Încă ${decisions.length - 3} decizii`}</button> : <span />}
-              <button className="link" onClick={async () => { await post("/brief"); await reload(); }}>Rescrie</button>
+            {more && <><p className="muted">{b.summary}</p>
+              {decisions.length > 0 && <><span className="label">De decis azi</span><ol className="num">{decisions.map((d: string, i: number) => <li key={i}>{d}</li>)}</ol></>}
+              <button className="link" onClick={async () => { await post("/brief"); await reload(); }}>Rescrie briefingul</button></>}
+            <div className="row two">
+              {canSpeak ? <button className="btn listen" onClick={listen}><Icon d={reading ? I.stop : I.play} size={18} />{reading ? "Oprește" : "Ascultă"}</button> : <span />}
+              <button className="btn ghost" onClick={() => setMore(!more)}>{more ? "Strânge" : decisions.length ? `Citește · ${decisions.length} decizii` : "Citește"}</button>
             </div>
-            {canSpeak && <button className="btn ghost listen" onClick={listen}><Icon d={reading ? I.stop : I.play} size={18} />{reading ? "Oprește citirea" : "Ascultă briefingul"}</button>}
           </> : <><Empty>Briefingul de azi nu a fost scris încă.</Empty><Btn onClick={async () => { await post("/brief"); await reload(); }}>Scrie briefingul</Btn></>}
         </Card>
 
-        <H right={<a className="link" href="#/santiere">Detalii</a>}>Proiecte</H>
-        <div className="stack tight">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => <SiteRow key={s.id} s={s} compact />)}</div>
-
+        <H right={<a className="link" href="#/santiere">Toate</a>}>Proiecte</H>
+        <div className="rings">{[...data.sites].sort((a, b) => order[a.status] - order[b.status]).map((s: any) => { const C = 2 * Math.PI * 26, pctv = Math.max(0, Math.min(1, s.realPct || 0)), gap = Math.round(((s.realPct || 0) - (s.planPct || 0)) * 100), k = s.status === "critic" ? "crit" : s.status === "atentie" ? "warn" : s.status === "ok" ? "ok" : "none";
+          return <a key={s.id} className="ring" href={"#/santier/" + s.id} aria-label={`${s.name}: ${Math.round(pctv * 100)}% executat, ${k === "crit" ? "cu blocaj" : k === "warn" ? "de urmărit" : k === "ok" ? "în grafic" : "fără raport"}`}>
+            <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="26" className="r-bg" /><circle cx="32" cy="32" r="26" className={"r-fg r-" + k} strokeDasharray={`${(pctv * C).toFixed(1)} ${C.toFixed(1)}`} transform="rotate(-90 32 32)" /><text x="32" y="37" textAnchor="middle">{Math.round(pctv * 100)}%</text></svg>
+            <strong>{s.name}</strong>
+            <span className={"small rs-" + k}>{k === "crit" ? "Blocaj" : k === "none" ? "Fără raport" : gap < -1 ? `${-gap}% sub plan` : "În grafic"}{s.riskDays ? ` · ${s.riskDays} zile meteo` : ""}</span>
+          </a>; })}</div>
         </div>
         <div className="col-side">
-        <div className="tiles">
+        <div className="tiles four">
           <a className="tile" href="#/aprobari"><b>{data.waiting.approvals}</b><span>aprobări</span></a>
-          <a className="tile" href="#/autopilot"><b>{data.waiting.drafts}</b><span>documente pregătite</span></a>
+          <a className={"tile" + (data.waiting.replans ? " on" : "")} href="#/replanificari"><b>{data.waiting.replans}</b><span>grafice noi</span></a>
+          <a className="tile" href="#/alerte"><b className={crit ? "t-crit" : ""}>{data.alerts.length}</b><span>alerte</span></a>
           <a className="tile" href="#/sarcini"><b className={data.waiting.overdue ? "t-crit" : ""}>{data.waiting.overdue}</b><span>sarcini întârziate</span></a>
         </div>
 
-        <div className="stack tight">
-          {data.waiting.replans > 0 && <a className="navrow hl" href="#/replanificari"><div><strong>{data.waiting.replans} {data.waiting.replans === 1 ? "grafic nou propus" : "grafice noi propuse"}</strong><span className="small">Autopilotul a replanificat după vreme și livrări. Aprobă sau respinge.</span></div><Icon d={I.chev} size={18} /></a>}
-          <a className="navrow" href="#/meteo"><div><strong>Meteo: {data.weather.days ? `${data.weather.days} zile de lucru cu risc` : "fără risc în 7 zile"}</strong><span className="small muted">{data.weather.days ? `Pe ${data.weather.sites} ${data.weather.sites === 1 ? "șantier" : "șantiere"}, în următoarele 7 zile` : "Nicio lucrare planificată nu este expusă"}</span></div><Icon d={I.chev} size={18} /></a>
-          <a className="navrow" href="#/alerte"><div><strong>{data.alerts.length} alerte din sisteme</strong><span className="small muted">{crit ? crit + " critice · " : ""}rapoarte, ERP, BIM și meteo</span></div><Icon d={I.chev} size={18} /></a>
-          <a className="navrow" href="#/valoare"><div><strong>Valoare estimată: {lei(data.value.realized + data.value.potential)}</strong><span className="small muted">{st.actions} acțiuni ale Autopilotului azi{data.value.potential > 0 ? " · " + lei(data.value.potential) + " așteaptă decizia ta" : ""}</span></div><Icon d={I.chev} size={18} /></a>
-        </div>
+        <a className="card week" href="#/meteo" aria-label={data.weather.days ? `Meteo: ${data.weather.days} zile de lucru cu risc în următoarele 7 zile` : "Meteo: fără risc în 7 zile"}>
+          <div className="row between"><span className="label">Vremea și lucrările · 7 zile</span><Icon d={I.chev} size={16} /></div>
+          <div className="wk">{data.weather.week.map((d: any, i: number) => <div key={d.day} className={"wd w-" + d.sev}><span>{i === 0 ? "azi" : new Intl.DateTimeFormat("ro-RO", { weekday: "short" }).format(new Date(d.day + "T12:00:00")).replace(".", "")}</span><i style={{ height: 10 + d.sites * 12 + "px" }} /><b>{d.sites || ""}</b></div>)}</div>
+          <span className="small muted">{data.weather.days ? "Șantiere cu lucrări expuse, pe zile" : "Nicio lucrare expusă"}</span>
+        </a>
+
+        <a className="card valrow" href="#/valoare">
+          <div><span className="label">Valoare estimată</span><b>{lei(data.value.realized + data.value.potential)}</b></div>
+          <div className="vbar" aria-hidden="true"><i style={{ width: (data.value.realized + data.value.potential > 0 ? (data.value.realized / (data.value.realized + data.value.potential)) * 100 : 0) + "%" }} /></div>
+          <span className="small muted">{lei(data.value.realized)} obținuți · {lei(data.value.potential)} așteaptă decizia ta</span>
+        </a>
 
         <form className="ask" onSubmit={(e) => { e.preventDefault(); if (q.trim()) location.hash = "#/intreaba/" + encodeURIComponent(q.trim()); }}>
           <label htmlFor="askq" className="sr">Întreabă asistentul</label>
