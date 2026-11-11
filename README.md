@@ -24,7 +24,7 @@ După orice modificare: `npm run build`, commit, push.
 - **Azi**: briefingul zilei, ce te așteaptă (aprobări, documente pregătite, sarcini), alertele din toate sistemele, șantierele.
 - **Șantiere**: rezumat, bani (ERP), stadiu fizic și livrări (BIM), meteo suprapus peste lucrări, rapoarte.
 - **Replanificări**: când vremea sau o livrare strică graficul, un grafic nou calculat din BIM, cu impactul pe termen și pe cost; se aplică doar după aprobare.
-- **Import de proiect**: bugetul și graficul din Excel sau CSV, fără format fix; coloanele se potrivesc după denumire și pot fi corectate înainte de import.
+- **Import de proiect**: bugetul și graficul din Excel sau CSV, într-un proiect nou sau într-unul existent, fără format fix; coloanele se potrivesc după denumire și pot fi corectate înainte de import.
 - **Valoare**: ce a adus Autopilotul, în lei, pe patru categorii (zile de șantier, încasări, utilaje, timp), cu formula fiecărei sume și ipoteze editabile (`web/src/core/value.js`).
 - **Asistent vocal**: briefingul citit cu voce și comenzi spuse sau scrise (aprobă, respinge, aplică graficul, notează o sarcină, întrebări despre un șantier sau vreme). Aprobările și graficele cer confirmare. Regulile sunt în `web/src/core/commands.js`.
 - **Aprobări**: cererile din ERP, fiecare cu recomandare calculată față de bugetul rămas.
@@ -39,6 +39,15 @@ Automatizările și orarul lor sunt definite în `web/src/core/automations.js`.
 - **Adăugare și modificare peste tot.** Butonul „Adaugă” (proiect, proiect din Excel, raport, sarcină, cerere de aprobare, ședință, om în echipă) e pe orice ecran. În fișa unui proiect se editează proiectul, liniile de buget, situațiile de lucrări, zonele și stadiul lor, livrările, utilajele și sarcinile; orice rând se atinge ca să fie modificat sau șters.
 - **Date proprii în loc de demo.** Din „Mai mult → Datele aplicației → Începe cu proiectele tale”: datele demonstrative se șterg și aplicația rămâne goală, pe numele tău. Din acel moment actualizările aplicației nu mai ating datele.
 - **Copie de siguranță.** Același ecran descarcă întreaga bază de date ca fișier `.db` și o restaurează. Așa se mută datele și pe alt dispozitiv.
+
+## Echipă fără server: date trimise prin link
+
+- Din fișa proiectului, directorul îi trimite șefului de șantier o **invitație** ca link. Deschisă pe telefonul șefului, pregătește aplicația pentru acel proiect.
+- Șeful scrie sau dictează raportul zilnic și cererile de aprobare, apoi apasă „Trimite directorului”: se generează un link pe care îl trimite pe WhatsApp, e-mail sau SMS.
+- Directorul deschide linkul pe telefonul lui, vede ce conține și apasă „Adaugă în aplicație”. Autopilotul procesează raportul ca pe oricare altul. Un link deschis de două ori nu se adaugă de două ori.
+- Datele sunt chiar în link (codate în adresă), nu pe un server. Pozele nu încap în link, deci rămân pe telefonul șefului.
+
+Logica este în `web/src/core/share.js`.
 
 ## Limitele variantei fără server
 

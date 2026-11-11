@@ -4,7 +4,7 @@ import { Icon, I, Err, Btn } from "./ui";
 import { Azi, Alerte, Meteo, Santiere, Santier } from "./Director";
 import { Aprobari, Autopilot, Replanificari, Valoare } from "./Work";
 import { ImportProiect } from "./Import";
-import { AddMenu, Echipa } from "./Edit";
+import { AddMenu, Echipa, Invitatie, Primit } from "./Edit";
 import { MaiMult, Sedinte, Sarcini, Conducere, Intreaba, RaportNou, SefHome } from "./More";
 
 function useRoute() {
@@ -44,6 +44,8 @@ export default function App() {
   const user = me.data?.user;
   useEffect(() => { if (user?.role === "director") api("/approvals").then((d) => setBadge(d.items.filter((a: any) => a.status === "pending").length)).catch(() => {}); }, [user?.id, route.join("/")]);
 
+  if (route[0] === "invitatie" && route[1]) return <Invitatie key={route[1]} payload={route[1]} onDone={() => { setLost(0); me.reload(); }} />;
+  if (route[0] === "primit" && route[1] && (user || me.err)) return <Primit key={route[1]} payload={route[1]} isDirector={user?.role === "director"} />;
   if (!user) return me.err || lost ? <Login onDone={() => { setLost(0); me.reload(); }} /> : <div className="splash"><p>Se pregătește aplicația…</p></div>;
   const logout = async () => { await post("/logout"); location.hash = ""; me.setData(null as any); setLost((n) => n + 1); };
 

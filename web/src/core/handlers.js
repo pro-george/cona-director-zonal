@@ -13,6 +13,7 @@ import { kindOf } from "./importer.js";
 import * as value from "./value.js";
 import * as commands from "./commands.js";
 import * as crud from "./crud.js";
+import * as share from "./share.js";
 
 class HttpError extends Error { constructor(status, message) { super(message); this.status = status; } }
 const fail = (status, message) => { throw new HttpError(status, message); };
@@ -52,7 +53,19 @@ const ROUTES = [
   ["POST", "approvals/:id/delete", { director: true }, ({ params }) => { crud.removeApproval(params.id); return { ok: true }; }],
   ["POST", "reports/:id/delete", { director: true }, ({ params }) => { crud.removeReport(params.id); return { ok: true }; }],
   ["POST", "meetings/:id/delete", { director: true }, ({ params }) => { crud.removeMeeting(params.id); return { ok: true }; }],
-  ["GET", "me", {}, ({ user }) => ({ user, mode: mode(), ai: ai.aiMode(), today: dayOf(), sites: sitesAll().filter((s) => user.role === "director" || s.id === user.site_id).map((s) => ({ id: s.id, name: s.name, location: s.location })) })],
+  /* ----- echipă fără server: invitații și date trimise prin link ----- */
+  ["GET", "sites/:id/invite", { director: true }, ({ params }) => share.inviteLink(params.id) || fail(404, "Proiectul nu există.")],
+  ["POST", "join", { open: true }, async ({ body }) => { const r = share.join(body.payload, body.name) || fail(400, "Invitația nu a putut fi citită. Cere un link nou."); auto.ensure(); try { localStorage.setItem(UID, String(r.uid)); } catch { /* ignorat */ } await flush(); return r; }],
+  ["GET", "reports/:id/link", {}, ({ params }) => share.reportLink(params.id) || fail(404, "Raportul nu există.")],
+  ["GET", "approvals/:id/link", {}, ({ params }) => share.approvalLink(params.id) || fail(404, "Cererea nu există.")],
+  ["POST", "preview", { open: true }, ({ body }) => share.preview(body.payload) || fail(400, "Linkul nu a putut fi citit.")],
+  ["POST", "receive", { director: true }, async ({ body }) => {
+    const r = share.receive(body.payload); if (r.error) fail(400, r.error);
+    if (r.kind === "rep" && r.id) await auto.onReport(r.id);
+    if (r.kind === "apr" && !r.duplicate) await auto.runNow("precheck");
+    return r;
+  }],
+  ["GET", "me", {}, ({ user }) => ({ user, mode: mode(), device: setting("device", "director"), director: setting("director", ""), ai: ai.aiMode(), today: dayOf(), sites: sitesAll().filter((s) => user.role === "director" || s.id === user.site_id).map((s) => ({ id: s.id, name: s.name, location: s.location })) })],
 
   ["GET", "home", { director: true }, () => {
     const today = dayOf(), reports = latestReports(today), b = one("SELECT * FROM briefs WHERE day=?", today);
@@ -77,20 +90,22 @@ const ROUTES = [
   }],
 
   ["POST", "projects/import", { director: true }, async ({ body }) => {
-    const name = String(body.name || "").trim().slice(0, 80) || fail(400, "Scrie numele proiectului.");
+    const target = body.target ? siteById(String(body.target)) || fail(404, "Proiectul ales nu mai există.") : null;
+    const name = target ? target.name : String(body.name || "").trim().slice(0, 80) || fail(400, "Scrie numele proiectului.");
     const budget = Array.isArray(body.budget) ? body.budget.slice(0, 200) : [], schedule = Array.isArray(body.schedule) ? body.schedule.slice(0, 400) : [];
     if (!budget.length && !schedule.length) fail(400, "Fișierul nu conține nici buget, nici grafic de lucrări care să poată fi importat.");
-    const location = String(body.location || "").trim().slice(0, 60);
-    let lat = null, lon = null;
-    if (location) try {
+    const location = target ? target.location : String(body.location || "").trim().slice(0, 60);
+    let lat = target ? target.lat : null, lon = target ? target.lon : null;
+    if (location && !target) try {
       const r = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=5&language=ro&format=json`, { signal: AbortSignal.timeout(6000) });
       const hits = (await r.json()).results || [], hit = hits.find((h) => h.country_code === "RO") || hits[0];
       if (hit) { lat = hit.latitude; lon = hit.longitude; }
     } catch { /* fără coordonate proiectul rămâne fără meteo */ }
-    const today = dayOf(), id = "imp-" + Date.now().toString(36);
+    const today = dayOf(), id = target ? target.id : "imp-" + Date.now().toString(36);
     const dates = schedule.flatMap((r) => [r.start, r.end]).filter(Boolean).sort();
     const total = budget.reduce((a, b) => a + b.budget, 0);
-    run("INSERT INTO sites(id,name,location,client,manager_id,contract,start,finish,ord,lat,lon) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, name, location, String(body.client || "").slice(0, 80), null, Number(body.contract) > 0 ? Number(body.contract) : total, dates[0] || today, dates.at(-1) || addDays(today, 90), (one("SELECT MAX(ord) m FROM sites").m || 0) + 1, lat, lon);
+    if (target) { const used = new Set(q("SELECT DISTINCT zone FROM bim_elements WHERE site_id=?", id).map((r) => r.zone)); for (const r of schedule) { let z = r.zone, k = 2; while (used.has(z)) z = `${r.zone} (${k++})`; r.zone = z; used.add(z); } }
+    else run("INSERT INTO sites(id,name,location,client,manager_id,contract,start,finish,ord,lat,lon) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, name, location, String(body.client || "").slice(0, 80), null, Number(body.contract) > 0 ? Number(body.contract) : total, dates[0] || today, dates.at(-1) || addDays(today, 90), (one("SELECT MAX(ord) m FROM sites").m || 0) + 1, lat, lon);
     for (const b of budget) run("INSERT INTO erp_budget(site_id,category,budget,actual,committed) VALUES(?,?,?,?,?)", id, String(b.category).slice(0, 80), b.budget, b.actual || 0, b.committed || 0);
     let elements = 0;
     for (const r of schedule) {
@@ -103,7 +118,7 @@ const ROUTES = [
         elements++;
       }
     }
-    auto.log("import", `Am importat proiectul ${name}`, `${budget.length} linii de buget și ${schedule.length} lucrări (${elements} elemente de urmărit). ${lat != null ? "Localizat pentru meteo: " + location + "." : "Fără localizare, deci fără meteo."}`, id, 90);
+    auto.log("import", target ? `Am adăugat date din Excel în ${name}` : `Am importat proiectul ${name}`, `${budget.length} linii de buget și ${schedule.length} lucrări (${elements} elemente de urmărit). ${lat != null ? "Localizat pentru meteo: " + location + "." : "Fără localizare, deci fără meteo."}`, id, 90);
     await auto.runNow("weather"); await auto.runNow("replan");
     return { id, name, budget: budget.length, schedule: schedule.length, elements, located: lat != null };
   }],

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, post, useLoad, dayShort, when, speak, stopSpeaking, listenOnce, canSpeak, canListen } from "./api";
 import { Page, Card, H, Pill, Auto, Btn, Err, Loading, Empty, Dictate, Md, Icon, I, copy } from "./ui";
-import { Sheet, F } from "./Edit";
+import { Sheet, F, ShareBox } from "./Edit";
 // @ts-ignore: modul JavaScript
 import { exportBytes, importBytes } from "./core/db.js";
 
@@ -10,6 +10,7 @@ export function MaiMult({ me, logout }: { me: any; logout: () => void }) {
   const backup = async () => {
     const blob = new Blob([exportBytes()], { type: "application/octet-stream" }), a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = `director-zonal-${new Date().toISOString().slice(0, 10)}.db`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    try { localStorage.setItem("dz.backup", String(Date.now())); } catch { /* ignorat */ }
     setMsg("Copia a fost descărcată. Păstreaz-o într-un loc sigur: conține toate datele.");
   };
   const restore = async (file?: File) => { if (!file) return; try { await importBytes(new Uint8Array(await file.arrayBuffer())); location.hash = "#/"; location.reload(); } catch (e: any) { setMsg(e.message || "Fișierul nu a putut fi citit."); } };
@@ -170,7 +171,7 @@ export function Intreaba({ q }: { q: string }) {
 }
 
 export function RaportNou({ me, back, onSent }: { me: any; back?: string; onSent?: () => void }) {
-  const [site, setSite] = useState(me.sites.length === 1 ? me.sites[0].id : ""), [text, setText] = useState(""), [files, setFiles] = useState<File[]>([]), [msg, setMsg] = useState(""), [res, setRes] = useState<any>(null), [busy, setBusy] = useState(false);
+  const [site, setSite] = useState(me.sites.length === 1 ? me.sites[0].id : ""), [text, setText] = useState(""), [files, setFiles] = useState<File[]>([]), [msg, setMsg] = useState(""), [res, setRes] = useState<any>(null), [busy, setBusy] = useState(false), [share, setShare] = useState<any>(null);
   const send = async () => {
     setBusy(true); setMsg("");
     try {
@@ -186,8 +187,11 @@ export function RaportNou({ me, back, onSent }: { me: any; back?: string; onSent
         <div className="row between"><Pill s={res.report.status} /><Auto>structurat automat</Auto></div>
         <p className="headline sm">{res.report.summary}</p>
         {res.tasks.length > 0 && <><span className="label">Sarcini deschise automat</span><ul>{res.tasks.map((t: string, i: number) => <li key={i}>{t}</li>)}</ul></>}
-        <p className="small muted">Raportul a ajuns la directorul zonal.{res.by === "demo" ? " Structurat pe reguli (mod demo)." : ""}</p>
+        {me.device === "sef" ? <><p className="small muted">Raportul e salvat pe telefonul tău. Trimite-l directorului{me.director ? " (" + me.director + ")" : ""} ca să-l vadă.</p>
+          <Btn onClick={async () => { const r = await api(`/reports/${res.report.id}/link`); setShare({ title: "Trimite raportul", text: r.text, link: r.link }); }}>Trimite directorului</Btn></>
+          : <p className="small muted">Raportul a fost salvat.{res.by === "demo" ? " Structurat pe reguli (mod demo)." : ""}</p>}
       </Card>}
+      {share && <ShareBox {...share} onClose={() => setShare(null)} />}
       <Card>
         {me.sites.length > 1 && <><span className="label">Șantier</span><div className="chips">{me.sites.map((s: any) => <button key={s.id} type="button" className="chip" aria-pressed={site === s.id} onClick={() => setSite(s.id)}>{s.name}</button>)}</div></>}
         {me.sites.length === 1 && <p><strong>{me.sites[0].name}</strong> <span className="muted small">{me.sites[0].location}</span></p>}
@@ -210,7 +214,8 @@ export function RaportNou({ me, back, onSent }: { me: any; back?: string; onSent
 export function SefHome({ me, route, logout }: { me: any; route: string[]; logout: () => void }) {
   const my = useLoad<any>("/my");
   const tab = route[0] === "sarcini" ? "sarcini" : route[0] === "mesaje" ? "mesaje" : "raport";
-  const [req, setReq] = useState(false), [sent, setSent] = useState("");
+  const [req, setReq] = useState(false), [sent, setSent] = useState(""), [share, setShare] = useState<any>(null);
+  const sendLink = async (path: string, title: string) => { const r = await api(path); setShare({ title, text: r.text, link: r.link }); };
   const T = ({ id, href, icon, label }: any) => <a href={href} aria-current={tab === id ? "page" : undefined}><span className="ti"><Icon d={icon} /></span>{label}</a>;
   return (
     <>
@@ -219,8 +224,9 @@ export function SefHome({ me, route, logout }: { me: any; route: string[]; logou
         {tab === "raport" && <>
           <RaportNou me={me} onSent={my.reload} />
           {me.sites[0] && <div className="content" style={{ paddingTop: 0, paddingBottom: 0 }}><button className="btn ghost" onClick={() => setReq(true)}>Cere o aprobare</button>{sent && <p className="small muted" role="status">{sent}</p>}</div>}
-          {req && <Sheet title="Cerere de aprobare" fields={F.approval([]).filter((x) => x.key !== "site_id")} initial={{ type: "comanda" }} saveLabel="Trimite cererea" onClose={() => setReq(false)} onSave={async (v) => { await post(`/sites/${me.sites[0].id}/approvals`, v); setSent("Cererea a ajuns la directorul zonal."); }} />}
-          <div className="content"><H>Rapoartele mele</H>{my.data?.reports.length ? <ul className="plain">{my.data.reports.map((r: any) => <li key={r.id}><div className="row between"><Pill s={r.status} /><span className="small muted">{when(r.ts)}</span></div><span>{r.summary}</span></li>)}</ul> : <Empty>Niciun raport trimis.</Empty>}</div>
+          {req && <Sheet title="Cerere de aprobare" fields={F.approval([]).filter((x) => x.key !== "site_id")} initial={{ type: "comanda" }} saveLabel="Trimite cererea" onClose={() => setReq(false)} onSave={async (v) => { const r = await post(`/sites/${me.sites[0].id}/approvals`, v); if (me.device === "sef") await sendLink(`/approvals/${r.id}/link`, "Trimite cererea"); else setSent("Cererea a fost adăugată."); }} />}
+          {share && <ShareBox {...share} onClose={() => setShare(null)} />}
+          <div className="content"><H>Rapoartele mele</H>{my.data?.reports.length ? <ul className="plain">{my.data.reports.map((r: any) => <li key={r.id}><div className="row between"><Pill s={r.status} /><span className="small muted">{when(r.ts)}</span></div><span>{r.summary}</span>{me.device === "sef" && <button className="link" onClick={() => sendLink(`/reports/${r.id}/link`, "Trimite raportul")}>Trimite directorului</button>}</li>)}</ul> : <Empty>Niciun raport trimis.</Empty>}</div>
         </>}
         {tab === "sarcini" && <Page title="Sarcinile șantierului">{my.data?.tasks.length ? <ul className="tasks">{my.data.tasks.map((t: any) => <li key={t.id}><label><input type="checkbox" onChange={async () => { await post("/tasks/" + t.id, { done: true }); my.reload(); }} /><span><strong>{t.title}</strong><span className="small muted">{t.owner} · termen {dayShort(t.due)}</span></span></label></li>)}</ul> : <Empty>Nicio sarcină deschisă.</Empty>}</Page>}
         {tab === "mesaje" && <Page title="Mesaje" eyebrow={me.user.name}>{my.data?.notifications.length ? <ul className="plain">{my.data.notifications.map((n: any) => <li key={n.id}><span className="small muted">{when(n.ts)}</span><span>{n.text}</span></li>)}</ul> : <Empty>Niciun mesaj.</Empty>}</Page>}

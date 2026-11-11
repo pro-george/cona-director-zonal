@@ -2,7 +2,7 @@ import { useState } from "react";
 import { api, post, useLoad, lei, mil, pct, dayLong, dayShort, time, mins, when, speak, stopSpeaking, canSpeak } from "./api";
 import { Page, Card, H, Pill, Src, Auto, Bar, Btn, Err, Loading, Empty, Icon, I, STATUS } from "./ui";
 import { Brand } from "./App";
-import { Sheet, F } from "./Edit";
+import { Sheet, F, ShareBox } from "./Edit";
 
 const order: any = { critic: 0, atentie: 1, ok: 2, none: 3 };
 
@@ -102,6 +102,7 @@ export function Azi({ me, logout }: { me: any; logout: () => void }) {
         </form>
         </div>
         {me.mode !== "own" && <p className="foot">Date demonstrative. ERP și BIM simulate.</p>}
+        {me.mode === "own" && (() => { let t = 0; try { t = Number(localStorage.getItem("dz.backup")) || 0; } catch { /* ignorat */ } const days = t ? Math.floor((Date.now() - t) / 86400000) : -1; return days < 0 || days >= 7 ? <a className="foot link" href="#/mai-mult">{days < 0 ? "Nu ai făcut încă o copie de siguranță a datelor." : `Ultima copie de siguranță e de acum ${days} zile.`} Fă una acum.</a> : null; })()}
       </div>}
     </div>
   );
@@ -135,7 +136,7 @@ export function Santiere() {
 
 export function Santier({ id }: { id: string }) {
   const { data, err, reload } = useLoad<any>("/sites/" + id);
-  const [tab, setTab] = useState("rezumat"), [sheet, setSheet] = useState<any>(null);
+  const [tab, setTab] = useState("rezumat"), [sheet, setSheet] = useState<any>(null), [share, setShare] = useState<any>(null);
   // Deschide un formular pentru un rând (buget, încasare, livrare, utilaj, sarcină): adăugare dacă nu are id, altfel modificare.
   const row = (entity: string, title: string, fields: any, item?: any, initial: any = {}) => setSheet({ title, fields, initial: item || initial,
     onSave: async (v: any) => { await post(item ? `/rows/${entity}/${item.id}` : `/sites/${id}/rows/${entity}`, v); await reload(); },
@@ -169,6 +170,12 @@ export function Santier({ id }: { id: string }) {
         {equipment.length ? <ul className="plain">{equipment.map((e: any) => <li key={e.id} className="tap" onClick={() => row("equipment", "Utilaj", F.equipment, e)}><div className="row between"><strong>{e.name}</strong><span className={"pill " + (e.status === "in_asteptare" ? "s-critic" : "s-ok")}>{e.status === "in_asteptare" ? "În așteptare" : "Lucrează"}</span></div><span className="small muted">{lei(e.daily_cost)} pe zi</span></li>)}</ul> : <Empty>Niciun utilaj trecut.</Empty>}
         <Add on={() => row("equipment", "Utilaj nou", F.equipment, undefined, { status: "activ" })}>Utilaj</Add>
         <a className="btn ghost" href="#/raport" style={{ textAlign: "center" }}>Trimite un raport de șantier</a>
+        <H>Șeful de șantier</H>
+        <Card>
+          <p>{site.manager ? <><strong>{site.manager}</strong> trimite rapoartele și cererile de pe telefonul lui.</> : "Proiectul nu are încă un șef de șantier ales."}</p>
+          <p className="small muted">Îi trimiți o invitație ca link. El raportează din aplicație și îți trimite fiecare raport tot ca link, pe care îl deschizi aici.</p>
+          {site.manager ? <Btn onClick={async () => { const r = await api(`/sites/${id}/invite`); setShare({ title: "Invitație pentru " + r.sef, text: `Invitație în aplicația Director zonal pentru ${site.name}:`, link: r.link, note: "Trimite-i linkul. Când îl deschide pe telefonul lui, aplicația se pregătește pentru acest proiect." }); }}>Invită-l pe telefonul lui</Btn> : <Btn kind="ghost" onClick={editProject}>Alege șeful de șantier</Btn>}
+        </Card>
       </>}
 
       {tab === "bani" && <>
@@ -235,6 +242,7 @@ export function Santier({ id }: { id: string }) {
           </details>
         </Card>))}</div> : <Empty>Niciun raport pentru acest șantier.</Empty>)}
       {sheet && <Sheet {...sheet} onClose={() => setSheet(null)} />}
+      {share && <ShareBox {...share} onClose={() => setShare(null)} />}
     </Page>
   );
 }

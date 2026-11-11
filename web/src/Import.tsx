@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { post, lei } from "./api";
+import { post, lei, useLoad } from "./api";
 import { Page, Card, H, Auto, Btn, Err, Empty } from "./ui";
 // @ts-ignore: modul JavaScript
 import { analyze, build, TYPES } from "./core/importer.js";
@@ -24,7 +24,8 @@ async function downloadTemplate() {
 
 export function ImportProiect() {
   const [sheets, setSheets] = useState<any[] | null>(null), [err, setErr] = useState(""), [done, setDone] = useState<any>(null);
-  const [f, setF] = useState({ name: "", location: "", client: "", contract: "" });
+  const [f, setF] = useState({ name: "", location: "", client: "", contract: "" }), [target, setTarget] = useState("");
+  const me = useLoad<any>("/me");
 
   const read = async (file?: File) => {
     if (!file) return; setErr(""); setDone(null);
@@ -41,7 +42,7 @@ export function ImportProiect() {
 
   const out = sheets ? build(sheets) : null;
   const missing = (sheets || []).filter((s) => s.type !== "ignora").flatMap((s) => TYPES[s.type].fields.filter((x: any) => x.req && s.maps[s.type][x.key] < 0).map((x: any) => `${s.name}: alege coloana pentru „${x.label}”`));
-  const send = async () => { setErr(""); try { setDone(await post("/projects/import", { ...f, contract: Number(String(f.contract).replace(/[^\d]/g, "")) || 0, budget: out!.budget, schedule: out!.schedule })); setSheets(null); } catch (e: any) { setErr(e.message); } };
+  const send = async () => { setErr(""); try { setDone(await post("/projects/import", { ...f, target, contract: Number(String(f.contract).replace(/[^\d]/g, "")) || 0, budget: out!.budget, schedule: out!.schedule })); setSheets(null); } catch (e: any) { setErr(e.message); } };
   const fmt = (v: any) => (v instanceof Date ? v.toLocaleDateString("ro-RO") : v == null ? "" : String(v));
 
   return (
@@ -65,11 +66,13 @@ export function ImportProiect() {
 
       {sheets && out && <>
         <Card>
-          <span className="label">Proiect</span>
+          <span className="label">Unde se importă</span>
+          <label htmlFor="pt">Proiect<select id="pt" value={target} onChange={(e) => setTarget(e.target.value)}><option value="">Proiect nou</option>{(me.data?.sites || []).map((s: any) => <option key={s.id} value={s.id}>Adaugă în: {s.name}</option>)}</select></label>
+          {target ? <p className="small muted">Liniile de buget și lucrările din fișier se adaugă la cele existente; nu se șterge nimic.</p> : <>
           <label htmlFor="pn">Nume<input id="pn" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
           <label htmlFor="pl">Localitate (pentru meteo)<input id="pl" value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} placeholder="Ex.: Sibiu" /></label>
           <label htmlFor="pc">Beneficiar<input id="pc" value={f.client} onChange={(e) => setF({ ...f, client: e.target.value })} /></label>
-          <label htmlFor="pv">Valoare contract (lei, opțional)<input id="pv" inputMode="numeric" value={f.contract} onChange={(e) => setF({ ...f, contract: e.target.value })} /></label>
+          <label htmlFor="pv">Valoare contract (lei, opțional)<input id="pv" inputMode="numeric" value={f.contract} onChange={(e) => setF({ ...f, contract: e.target.value })} /></label></>}
         </Card>
 
         {sheets.map((s, i) => (

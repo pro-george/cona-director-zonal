@@ -91,3 +91,66 @@ export function Echipa() {
     </div>
   );
 }
+
+// Trimiterea unui link: foaia de distribuire a telefonului unde există, altfel WhatsApp sau copiere.
+export function ShareBox({ title, text, link, note, onClose }: { title: string; text: string; link: string; note?: string; onClose: () => void }) {
+  const [msg, setMsg] = useState("");
+  const native = typeof navigator !== "undefined" && !!(navigator as any).share;
+  const doShare = async () => { try { await (navigator as any).share({ title, text, url: link }); } catch { /* omul a închis foaia */ } };
+  const doCopy = async () => { try { await navigator.clipboard.writeText(text + " " + link); setMsg("Link copiat."); } catch { setMsg("Copierea nu a reușit; ține apăsat pe link și copiază-l."); } };
+  return (
+    <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
+        <div className="sheet-head"><h2>{title}</h2><button type="button" className="iconbtn" onClick={onClose} aria-label="Închide"><Icon d={I.close} size={18} /></button></div>
+        {note && <p className="small muted">{note}</p>}
+        <p className="linkbox">{link}</p>
+        {native && <button className="btn" onClick={doShare}>Distribuie</button>}
+        <a className={"btn" + (native ? " ghost" : "")} style={{ textAlign: "center" }} href={"https://wa.me/?text=" + encodeURIComponent(text + " " + link)} target="_blank" rel="noreferrer">Trimite pe WhatsApp</a>
+        <button className="btn ghost" onClick={doCopy}>Copiază linkul</button>
+        {msg && <p className="small muted" role="status">{msg}</p>}
+      </div>
+    </div>
+  );
+}
+
+// Șeful de șantier deschide invitația primită de la director.
+export function Invitatie({ payload, onDone }: { payload: string; onDone: () => void }) {
+  const [inv] = useState<any>(() => { try { return JSON.parse(decodeURIComponent(escape(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))))); } catch { return null; } });
+  const [name, setName] = useState(inv?.sef || ""), [err, setErr] = useState(""), users = useLoad<any>("/users");
+  if (!inv?.site) return <div className="login"><div className="login-top"><h1>Invitație</h1><p>Linkul nu a putut fi citit. Cere-i directorului unul nou.</p></div></div>;
+  const own = users.data?.mode === "own";
+  return (
+    <div className="login">
+      <div className="login-top"><h1>Invitație</h1><p>{inv.director || "Directorul zonal"} te invită ca șef de șantier la <strong>{inv.site.name}</strong>.</p></div>
+      <div className="content">
+        <label htmlFor="jn">Numele tău<input id="jn" value={name} onChange={(e) => setName(e.target.value)} /></label>
+        <p className="small muted">Pe acest telefon vei trimite rapoartele zilnice și cererile de aprobare pentru acest proiect. Le trimiți directorului printr-un link, de exemplu pe WhatsApp.</p>
+        {own && <p className="err">Atenție: acest telefon are deja date proprii în aplicație. Dacă accepți, ele se șterg. Fă întâi o copie de siguranță din „Mai mult”.</p>}
+        <Err msg={err} />
+        <button className="btn" onClick={async () => { try { await post("/join", { payload, name }); location.hash = "#/"; onDone(); } catch (e: any) { setErr(e.message); } }}>{own ? "Șterge datele și acceptă invitația" : "Acceptă invitația"}</button>
+        <a className="link" href="#/">Renunță</a>
+      </div>
+    </div>
+  );
+}
+
+// Directorul deschide un link primit de la un șef de șantier.
+export function Primit({ payload, isDirector }: { payload: string; isDirector: boolean }) {
+  const [info, setInfo] = useState<any>(null), [err, setErr] = useState(""), [done, setDone] = useState<any>(null);
+  useEffect(() => { post("/preview", { payload }).then(setInfo).catch((e) => setErr(e.message)); }, [payload]);
+  const kind = info?.kind === "apr" ? "Cerere de aprobare" : "Raport de șantier";
+  return (
+    <div className="page narrow">
+      <header className="bar"><div className="bar-t"><span className="eyebrow">Primit prin link</span><h1>{info ? kind : "Se citește…"}</h1></div></header>
+      <div className="content">
+        <Err msg={err} />
+        {info && <div className="card"><strong className="big">{info.site}</strong><span className="small muted">{info.author} · {info.day}</span><p>{info.summary}</p></div>}
+        {info && !info.known && <p className="err">Acest proiect nu există pe acest dispozitiv, deci nu are unde să fie adăugat.</p>}
+        {info && !isDirector && <p className="err">Linkul trebuie deschis pe telefonul directorului zonal, în contul lui.</p>}
+        {done ? <><p className="small muted" role="status">{done.duplicate ? "Era deja primit; nu l-am adăugat a doua oară." : "Adăugat. Autopilotul l-a procesat."}</p><a className="btn" style={{ textAlign: "center" }} href={done.kind === "apr" ? "#/aprobari" : "#/santier/" + done.site_id}>{done.kind === "apr" ? "Vezi aprobările" : "Deschide proiectul"}</a></>
+          : info && info.known && isDirector && <button className="btn" onClick={async () => { try { setDone(await post("/receive", { payload })); } catch (e: any) { setErr(e.message); } }}>Adaugă în aplicație</button>}
+        <a className="link" href="#/">Înapoi la aplicație</a>
+      </div>
+    </div>
+  );
+}
